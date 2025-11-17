@@ -1,62 +1,54 @@
+from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
+from django.contrib.auth.models import PermissionsMixin
 from django.db import models
-from django.contrib.auth.models import AbstractUser
 
-class CustomUser(AbstractUser):
-    USER_ROLE = (
-        ('buyer', 'Buyer'),
-        ('seller', 'Seller'),
-        ('admin', 'Admin')
-    )
+
+class UserManager(BaseUserManager):
+    def create_user(self, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError("The Email field must be set.")
+        email = self.normalize_email(email)
+        if password is None:
+            raise ValueError("Users must have a password.")
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault("role", User.Role.ADMIN)
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        extra_fields.setdefault("is_active", True)
+
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
+
+        return self.create_user(email, password, **extra_fields)
+
+
+class User(AbstractBaseUser, PermissionsMixin):
+    class Role(models.TextChoices):
+        FARMER = "farmer", "Farmer / Seller"
+        BUYER = "buyer", "Buyer"
+        DOCTOR = "doctor", "Doctor / Consultant"
+        ADMIN = "admin", "Admin"
+
     email = models.EmailField(unique=True)
-    phone = models.CharField(max_length=15, unique=True)
-    role = models.CharField(max_length=10, choices=USER_ROLE, default='buyer')
-    location = models.CharField(max_length=200, help_text='User location/address', default='Not specified')
-    is_verified = models.BooleanField(default=False)
-    profile_picture = models.ImageField(upload_to='profile_pic/', null=True, blank=True)
+    full_name = models.CharField(max_length=150)
+    phone_number = models.CharField(max_length=20, blank=True)
+    role = models.CharField(max_length=20, choices=Role.choices)
+    is_doctor_verified = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
-    last_active = models.DateTimeField(auto_now=True)
-    
-  
-    groups = models.ManyToManyField(
-        'auth.Group',
-        related_name='custom_user_set',  
-        blank=True,
-        help_text='The groups this user belongs to.',
-        verbose_name='groups',
-    )
-    user_permissions = models.ManyToManyField(
-        'auth.Permission',
-        related_name='custom_user_permissions_set',  
-        blank=True,
-        help_text='Specific permissions for this user.',
-        verbose_name='user permissions',
-    )
-    
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username', 'phone', 'location']
-    
+
+    objects = UserManager()
+
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["full_name", "role"]
+
     def __str__(self):
-        return self.username
-    
-class UserProfile(models.Model):
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='profile')
-    bio = models.TextField(max_length=500)
-    date_of_birth = models.DateField(null=True, blank=True)
-    gender = models.CharField(max_length=10, choices=[('M', 'Male'), ('F', 'Female'), ('O', 'other')], blank=True)
-    
-    # Creating for sellers or the farmers 
-    farm_name = models.CharField(max_length=100, blank=True)
-    farm_size = models.CharField(max_length=100, blank=True)
-    experience_years = models.PositiveIntegerField(null=True, blank=True)
-    specialization = models.JSONField(default=list, blank=True)
-    
-    
-    # Creating for rating and reviews 
-    average_rating = models.DecimalField(max_digits=3, decimal_places=2, default=0)
-    total_reviews = models.PositiveIntegerField(default=0)
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    def __str__(self):
-        return f"{self.user.first_name} Profile"
+        return f"{self.full_name} ({self.email})"
