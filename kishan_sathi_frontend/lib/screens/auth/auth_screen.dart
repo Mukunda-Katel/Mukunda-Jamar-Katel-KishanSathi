@@ -76,8 +76,8 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       child: Column(
         children: [
           Container(
-            width: 160,
-            height: 160,
+            width: 150,
+            height: 150,
             decoration: BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
@@ -98,7 +98,9 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                 color: Colors.grey.shade100, // light contrast background
                 child: Image.asset(
                   'assets/icons/Kishan_sathi_logo.png',
-                  fit: BoxFit.cover,       
+                  height: 120,
+                  width: 120,
+                  fit: BoxFit.fill,       
                   filterQuality: FilterQuality.high, 
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
