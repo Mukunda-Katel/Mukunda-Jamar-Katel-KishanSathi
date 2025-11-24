@@ -1,43 +1,38 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import '../config/app_config.dart';
 import '../services/api_service.dart';
 
 class AuthRepository {
-  final ApiService apiService;
-  final SharedPreferences prefs;
+  final ApiService _apiService;
+  final SharedPreferences _prefs;
 
   AuthRepository({
-    required this.apiService,
-    required this.prefs,
-  });
+    required ApiService apiService,
+    required SharedPreferences prefs,
+  })  : _apiService = apiService,
+        _prefs = prefs;
 
+  /// Login user
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,
     required String role,
   }) async {
-    final response = await apiService.post(
-      AppConfig.loginEndpoint,
-      {
-        'email': email,
-        'password': password,
-        'role': role,
-      },
+    final response = await _apiService.login(
+      email: email,
+      password: password,
+      role: role,
     );
 
-    if (response.containsKey('token') && response.containsKey('user')) {
-      final token = response['token'] as String;
-      
-      // Save token and role
-      await prefs.setString(AppConfig.authTokenKey, token);
-      await prefs.setString(AppConfig.userRoleKey, role);
-      
-      return response;
-    }
-    
-    throw 'Invalid response from server.';
+    // Save token and user data
+    await _saveAuthData(
+      token: response['token'] as String,
+      userRole: (response['user'] as Map<String, dynamic>)['role'] as String,
+    );
+
+    return response;
   }
 
+  /// Register new user
   Future<Map<String, dynamic>> register({
     required String fullName,
     required String email,
@@ -45,43 +40,63 @@ class AuthRepository {
     required String password,
     required String role,
   }) async {
-    final response = await apiService.post(
-      AppConfig.registerEndpoint,
-      {
-        'full_name': fullName,
-        'email': email,
-        'phone_number': phoneNumber,
-        'password': password,
-        'role': role,
-      },
+    final response = await _apiService.register(
+      fullName: fullName,
+      email: email,
+      phoneNumber: phoneNumber,
+      password: password,
+      role: role,
     );
 
-    if (response.containsKey('token') && response.containsKey('user')) {
-      final token = response['token'] as String;
-      final userData = response['user'] as Map<String, dynamic>;
-      final userRole = userData['role'] as String? ?? role;
-      
-      // Save token and role
-      await prefs.setString(AppConfig.authTokenKey, token);
-      await prefs.setString(AppConfig.userRoleKey, userRole);
-      
-      return response;
+    // Save token if available (for farmers/buyers)
+    if (response.containsKey('token')) {
+      await _saveAuthData(
+        token: response['token'] as String,
+        userRole: (response['user'] as Map<String, dynamic>)['role'] as String,
+      );
     }
-    
-    throw 'Invalid response from server.';
+
+    return response;
   }
 
+  /// Logout user
   Future<void> logout() async {
-    await prefs.remove(AppConfig.authTokenKey);
-    await prefs.remove(AppConfig.userRoleKey);
+    await _clearAuthData();
   }
 
-  String? getStoredToken() {
-    return prefs.getString(AppConfig.authTokenKey);
+  /// Check if user is logged in
+  Future<bool> isLoggedIn() async {
+    final token = _prefs.getString('auth_token');
+    return token != null && token.isNotEmpty;
   }
 
-  String? getStoredRole() {
-    return prefs.getString(AppConfig.userRoleKey);
+  /// Get saved token
+  String? getToken() {
+    return _prefs.getString('auth_token');
+  }
+
+  /// Get saved user role
+  String? getUserRole() {
+    return _prefs.getString('user_role');
+  }
+
+  /// Save auth data
+  Future<void> _saveAuthData({
+    required String token,
+    required String userRole,
+  }) async {
+    await _prefs.setString('auth_token', token);
+    await _prefs.setString('user_role', userRole);
+  }
+
+  /// Clear auth data
+  Future<void> _clearAuthData() async {
+    await _prefs.remove('auth_token');
+    await _prefs.remove('user_role');
+  }
+
+  void dispose() {
+    _apiService.dispose();
   }
 }
 
