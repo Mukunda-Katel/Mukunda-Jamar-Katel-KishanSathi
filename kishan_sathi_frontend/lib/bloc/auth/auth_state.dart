@@ -40,3 +40,7 @@ class AuthFailure extends AuthState {
   List<Object?> get props => [error];
 }
 
+class AuthUnauthenticated extends AuthState {
+  const AuthUnauthenticated();
+}
+
