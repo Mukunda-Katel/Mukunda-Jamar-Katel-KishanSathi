@@ -1,5 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../models/user_model.dart';
+import '../../models/user_model.dart';  
 import '../../repositories/auth_repository.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
@@ -11,6 +11,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LoginRequested>(_onLoginRequested);
     on<RegisterRequested>(_onRegisterRequested);
     on<LogoutRequested>(_onLogoutRequested);
+    on<CheckAuthStatus>(_onCheckAuthStatus);
   }
 
   Future<void> _onLoginRequested(
@@ -25,9 +26,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         role: event.role,
       );
 
-      final user = UserModel.fromJson(response['user'] as Map<String, dynamic>);
+      final user = UserModel.fromJson(response['user'] as Map<String, dynamic>); 
       final token = response['token'] as String;
-      final message = response['message'] as String? ?? 'Login successful.';
+      final message = response['message'] as String? ?? 'Login successful';
 
       emit(AuthSuccess(
         token: token,
@@ -35,7 +36,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         message: message,
       ));
     } catch (e) {
-      emit(AuthFailure(error: e.toString()));
+      emit(AuthFailure(error: e.toString().replaceAll('Exception: ', '')));
     }
   }
 
@@ -53,17 +54,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         role: event.role,
       );
 
-      final user = UserModel.fromJson(response['user'] as Map<String, dynamic>);
-      final token = response['token'] as String;
-      final message = response['message'] as String? ?? 'Registration successful.';
+      final user = UserModel.fromJson(response['user'] as Map<String, dynamic>);  
+      final token = response['token'] as String? ?? '';
+      final message = response['message'] as String? ?? 'Registration successful';
 
-      emit(AuthSuccess(
-        token: token,
-        user: user,
-        message: message,
-      ));
+      if (token.isNotEmpty) {
+        emit(AuthSuccess(
+          token: token,
+          user: user,
+          message: message,
+        ));
+      } else {
+        emit(AuthFailure(error: message));
+      }
     } catch (e) {
-      emit(AuthFailure(error: e.toString()));
+      emit(AuthFailure(error: e.toString().replaceAll('Exception: ', '')));
     }
   }
 
@@ -71,8 +76,25 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     LogoutRequested event,
     Emitter<AuthState> emit,
   ) async {
-    await authRepository.logout();
-    emit(const AuthInitial());
+    emit(const AuthLoading());
+    try {
+      await authRepository.logout();
+      emit(const AuthUnauthenticated());
+    } catch (e) {
+      emit(AuthFailure(error: e.toString()));
+    }
+  }
+
+  Future<void> _onCheckAuthStatus(
+    CheckAuthStatus event,
+    Emitter<AuthState> emit,
+  ) async {
+    final isLoggedIn = await authRepository.isLoggedIn();
+    if (isLoggedIn) {
+      emit(const AuthUnauthenticated());
+    } else {
+      emit(const AuthUnauthenticated());
+    }
   }
 }
 
