@@ -54,7 +54,7 @@ class DoctorRegisterSerializer(serializers.Serializer):
     experience_years = serializers.IntegerField(min_value=0, required=False)
     license_number = serializers.CharField(max_length=100, required=False, allow_blank=True)
     degree_certificate = serializers.FileField(
-        required=True,
+        required=False,
         help_text="Upload your degree certificate (PDF, JPG, PNG, max 5MB)",
     )
 
