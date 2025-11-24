@@ -1,23 +1,18 @@
 class AppConfig {
-  // static const String baseUrl = 'http://127.0.0.1:8000/api';
-  static const Duration requestTimeout = Duration(seconds: 30);
-  static const String baseUrl = 'https://kishansathi.onrender.com/api';
+  // For Android Emulator (10.0.2.2 maps to localhost)
+  static const String baseUrl = 'http://10.0.2.2:8000';
   
   // API Endpoints
-  static const String loginEndpoint = '/auth/login/';
-  static const String registerEndpoint = '/auth/register/';
-  static const String doctorRegisterEndpoint = 'auth/register/doctor/';
+  static const String loginEndpoint = '/api/auth/login/';
+  static const String registerEndpoint = '/api/auth/register/';
+  static const String doctorRegisterEndpoint = '/api/auth/register/doctor/';
+  static const String logoutEndpoint = '/api/auth/logout/';
   
-  
-  // SharedPreferences Keys
-  static const String authTokenKey = 'auth_token';
-  static const String userRoleKey = 'user_role';
-
-  //timeout duration
+  // NEW: Add timeout duration
   static const Duration timeout = Duration(seconds: 30);
-
-  // for full URL for endpoints
-  static String getUrl(String endpoint) => '$baseUrl$endpoint';
-
+  
+  // Get full URL
+  static String getUrl(String endpoint) {
+    return '$baseUrl$endpoint';
+  }
 }
-
