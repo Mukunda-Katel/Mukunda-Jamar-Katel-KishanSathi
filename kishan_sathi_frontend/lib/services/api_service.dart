@@ -3,115 +3,121 @@ import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 
 class ApiService {
-  final String baseUrl;
-  final Duration timeout;
+  final http.Client _client;
 
-  ApiService({
-    String? baseUrl,
-    Duration? timeout,
-  })  : baseUrl = baseUrl ?? AppConfig.baseUrl,
-        timeout = timeout ?? AppConfig.requestTimeout;
+  ApiService({http.Client? client}) : _client = client ?? http.Client();
 
-  Future<Map<String, dynamic>> post(
-    String endpoint,
-    Map<String, dynamic> body, {
-    Map<String, String>? headers,
+  /// Login user
+  Future<Map<String, dynamic>> login({
+    required String email,
+    required String password,
+    required String role,
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl$endpoint');
-      final requestHeaders = {
-        'Content-Type': 'application/json',
-        ...?headers,
+      final url = Uri.parse(AppConfig.getUrl(AppConfig.loginEndpoint));
+      
+      final response = await _client
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'email': email,
+              'password': password,
+              'role': role,
+            }),
+          )
+          .timeout(AppConfig.timeout);
+
+      print('Login Response Status: ${response.statusCode}');
+      print('Login Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else if (response.statusCode == 400) {
+        final error = jsonDecode(response.body);
+        final errorMessage = error['non_field_errors']?[0] ?? 
+                            error['email']?[0] ?? 
+                            error['password']?[0] ?? 
+                            'Invalid credentials';
+        throw Exception(errorMessage);
+      } else {
+        throw Exception('Login failed with status: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Login Error: $e');
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  /// Register new user (Farmer/Buyer)
+  Future<Map<String, dynamic>> register({
+    required String fullName,
+    required String email,
+    required String phoneNumber,
+    required String password,
+    required String role,
+  }) async {
+    try {
+      final url = Uri.parse(AppConfig.getUrl(AppConfig.registerEndpoint));
+      
+      final requestBody = {
+        'full_name': fullName,
+        'email': email,
+        'phone_number': phoneNumber,
+        'password': password,
+        'role': role,
       };
 
-      final response = await http
+      print('Register Request URL: $url');
+      print('Register Request Body: $requestBody');
+
+      final response = await _client
           .post(
-            uri,
-            headers: requestHeaders,
-            body: jsonEncode(body),
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(requestBody),
           )
-          .timeout(timeout);
+          .timeout(AppConfig.timeout);
 
-      return _handleResponse(response);
+      print('Register Response Status: ${response.statusCode}');
+      print('Register Response Body: ${response.body}');
+
+      if (response.statusCode == 201) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else if (response.statusCode == 400) {
+        final error = jsonDecode(response.body) as Map<String, dynamic>;
+        
+        // Extract first error message from any field
+        String errorMessage = 'Registration failed';
+        
+        if (error.containsKey('email')) {
+          errorMessage = (error['email'] as List).first.toString();
+        } else if (error.containsKey('phone_number')) {
+          errorMessage = (error['phone_number'] as List).first.toString();
+        } else if (error.containsKey('password')) {
+          errorMessage = (error['password'] as List).first.toString();
+        } else if (error.containsKey('role')) {
+          errorMessage = (error['role'] as List).first.toString();
+        } else if (error.containsKey('non_field_errors')) {
+          errorMessage = (error['non_field_errors'] as List).first.toString();
+        } else {
+          // Get first error from any field
+          final firstError = error.values.first;
+          errorMessage = firstError is List ? firstError[0].toString() : firstError.toString();
+        }
+        
+        throw Exception(errorMessage);
+      } else {
+        throw Exception('Registration failed with status: ${response.statusCode}');
+      }
     } catch (e) {
-      if (e.toString().contains('TimeoutException') ||
-          e.toString().contains('SocketException')) {
-        throw 'Network error. Please check your connection and try again.';
-      }
-      throw _cleanErrorMessage(e.toString());
+      print('Register Error: $e');
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
 
-  Map<String, dynamic> _handleResponse(http.Response response) {
-    final statusCode = response.statusCode;
-    final responseBody = response.body;
-
-    if (statusCode == 200 || statusCode == 201) {
-      if (responseBody.isEmpty) {
-        return {};
-      }
-      try {
-        return jsonDecode(responseBody) as Map<String, dynamic>;
-      } catch (e) {
-        throw 'Invalid response format from server.';
-      }
-    } else if (statusCode == 400) {
-      try {
-        final errorData = jsonDecode(responseBody) as Map<String, dynamic>;
-        
-        // Try to extract error message from common Django REST Framework error formats
-        if (errorData.containsKey('error')) {
-          throw errorData['error'] as String;
-        }
-        if (errorData.containsKey('message')) {
-          throw errorData['message'] as String;
-        }
-        if (errorData.containsKey('detail')) {
-          throw errorData['detail'] as String;
-        }
-        
-        // Handle field-specific errors
-        final errors = <String>[];
-        errorData.forEach((key, value) {
-          if (value is List && value.isNotEmpty) {
-            errors.add('${key}: ${value.first}');
-          } else if (value is String) {
-            errors.add('${key}: $value');
-          }
-        });
-        
-        if (errors.isNotEmpty) {
-          throw errors.join(', ');
-        }
-        
-        throw 'Invalid request. Please check your input.';
-      } catch (e) {
-        if (e is String) {
-          throw e;
-        }
-        throw 'Invalid request. Please check your input.';
-      }
-    } else if (statusCode == 401) {
-      throw 'Invalid credentials. Please try again.';
-    } else if (statusCode == 403) {
-      throw 'Access denied. Please contact support.';
-    } else if (statusCode >= 500) {
-      throw 'Server error. Please try again later.';
-    } else {
-      throw 'An error occurred. Please try again.';
-    }
-  }
-
-  String _cleanErrorMessage(String error) {
-    // Remove common exception prefixes
-    String cleaned = error;
-    if (cleaned.startsWith('Exception: ')) {
-      cleaned = cleaned.substring('Exception: '.length);
-    }
-    if (cleaned.startsWith('FormatException: ')) {
-      cleaned = cleaned.substring('FormatException: '.length);
-    }
-    return cleaned.trim();
+  void dispose() {
+    _client.close();
   }
 }
 
