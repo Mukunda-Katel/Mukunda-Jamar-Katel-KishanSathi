@@ -145,6 +145,7 @@ class UserModel extends Equatable {
   }
 
   bool get isEmpty => id == 0 || email.isEmpty;
+  bool get isNotEmpty => !isEmpty;
   // For user status message like for users such as doctors
   String get statusMessage {
     if (isDoctor) {
