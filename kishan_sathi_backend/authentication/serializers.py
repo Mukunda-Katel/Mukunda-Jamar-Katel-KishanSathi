@@ -65,7 +65,7 @@ class DoctorRegisterSerializer(serializers.Serializer):
     experience_years = serializers.IntegerField(min_value=0)
     license_number = serializers.CharField(max_length=50)
     
-    # ✅ NEW: Certificate file field
+    # NEW: Certificate file field
     certificate = serializers.FileField(
         required=True,
         help_text='Upload veterinary license certificate (PDF, JPG, PNG, max 10MB)'
