@@ -31,6 +31,20 @@ class AuthSuccess extends AuthState {
   List<Object?> get props => [token, user, message];
 }
 
+// NEW: Doctor Registration Pending State
+class DoctorRegistrationPending extends AuthState {
+  final UserModel user;
+  final String message;
+
+  const DoctorRegistrationPending({
+    required this.user,
+    required this.message,
+  });
+
+  @override
+  List<Object?> get props => [user, message];
+}
+
 class AuthFailure extends AuthState {
   final String error;
 
