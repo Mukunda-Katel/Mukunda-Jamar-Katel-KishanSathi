@@ -1,5 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../models/user_model.dart';  
+import '../../models/user_model.dart';
 import '../../repositories/auth_repository.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
@@ -10,6 +10,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc({required this.authRepository}) : super(const AuthInitial()) {
     on<LoginRequested>(_onLoginRequested);
     on<RegisterRequested>(_onRegisterRequested);
+    on<DoctorRegisterRequested>(_onDoctorRegisterRequested);
     on<LogoutRequested>(_onLogoutRequested);
     on<CheckAuthStatus>(_onCheckAuthStatus);
   }
@@ -26,7 +27,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         role: event.role,
       );
 
-      final user = UserModel.fromJson(response['user'] as Map<String, dynamic>); 
+      final user = UserModel.fromJson(response['user'] as Map<String, dynamic>);
       final token = response['token'] as String;
       final message = response['message'] as String? ?? 'Login successful';
 
@@ -54,7 +55,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         role: event.role,
       );
 
-      final user = UserModel.fromJson(response['user'] as Map<String, dynamic>);  
+      final user = UserModel.fromJson(response['user'] as Map<String, dynamic>);
       final token = response['token'] as String? ?? '';
       final message = response['message'] as String? ?? 'Registration successful';
 
@@ -67,6 +68,37 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       } else {
         emit(AuthFailure(error: message));
       }
+    } catch (e) {
+      emit(AuthFailure(error: e.toString().replaceAll('Exception: ', '')));
+    }
+  }
+
+  /// UPDATED: Handle doctor registration with file
+  Future<void> _onDoctorRegisterRequested(
+    DoctorRegisterRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading());
+    try {
+      final response = await authRepository.registerDoctor(
+        fullName: event.fullName,
+        email: event.email,
+        phoneNumber: event.phoneNumber,
+        password: event.password,
+        specialization: event.specialization,
+        experienceYears: event.experienceYears,
+        licenseNumber: event.licenseNumber,
+        certificateFile: event.certificateFile,
+      );
+
+      final user = UserModel.fromJson(response['user'] as Map<String, dynamic>);
+      final message = response['message'] as String? ??
+          'Registration submitted successfully! Pending admin approval.';
+
+      emit(DoctorRegistrationPending(
+        user: user,
+        message: message,
+      ));
     } catch (e) {
       emit(AuthFailure(error: e.toString().replaceAll('Exception: ', '')));
     }
