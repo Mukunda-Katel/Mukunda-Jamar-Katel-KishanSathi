@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io'; 
 import '../services/api_service.dart';
 
 class AuthRepository {
@@ -23,7 +24,6 @@ class AuthRepository {
       role: role,
     );
 
-    // Save token and user data
     await _saveAuthData(
       token: response['token'] as String,
       userRole: (response['user'] as Map<String, dynamic>)['role'] as String,
@@ -32,7 +32,7 @@ class AuthRepository {
     return response;
   }
 
-  /// Register new user
+  /// Register new user (Farmer/Buyer)
   Future<Map<String, dynamic>> register({
     required String fullName,
     required String email,
@@ -48,13 +48,37 @@ class AuthRepository {
       role: role,
     );
 
-    // Save token if available (for farmers/buyers)
     if (response.containsKey('token')) {
       await _saveAuthData(
         token: response['token'] as String,
         userRole: (response['user'] as Map<String, dynamic>)['role'] as String,
       );
     }
+
+    return response;
+  }
+
+  /// UPDATED: Register doctor with certificate file
+  Future<Map<String, dynamic>> registerDoctor({
+    required String fullName,
+    required String email,
+    required String phoneNumber,
+    required String password,
+    required String specialization,
+    required int experienceYears,
+    required String licenseNumber,
+    required File certificateFile, 
+  }) async {
+    final response = await _apiService.registerDoctor(
+      fullName: fullName,
+      email: email,
+      phoneNumber: phoneNumber,
+      password: password,
+      specialization: specialization,
+      experienceYears: experienceYears,
+      licenseNumber: licenseNumber,
+      certificateFile: certificateFile,
+    );
 
     return response;
   }
