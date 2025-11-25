@@ -6,6 +6,7 @@ import '../../theme/app_theme.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
 import '../../bloc/auth/auth_state.dart';
+import 'doctor_registration_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -257,9 +258,47 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
             child: IndexedStack(
               index: _tabController.index,
-              children: const [
-                LoginForm(),
-                SignupForm(),
+              children: [
+                LoginForm(isActive: _tabController.index == 0),
+                SignupForm(isActive: _tabController.index == 1),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+            child: Column(
+              children: [
+                const Divider(),
+                const SizedBox(height: 16),
+                const Text(
+                  'Are you a Veterinary Doctor?',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.darkGreen,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const DoctorRegistrationScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.medical_services, size: 20),
+                  label: const Text('Register as Consultant'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.primaryGreen,
+                    side: const BorderSide(color: AppTheme.primaryGreen, width: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -271,7 +310,9 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
 
 //Login form 
 class LoginForm extends StatefulWidget {
-  const LoginForm({super.key});
+  const LoginForm({super.key, required this.isActive});
+
+  final bool isActive;
 
   @override
   State<LoginForm> createState() => _LoginFormState();
@@ -370,8 +411,9 @@ class _LoginFormState extends State<LoginForm> {
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<AuthBloc, AuthState>(
+      listenWhen: (_, __) => widget.isActive,
       listener: (context, state) {
-        if (state is AuthSuccess) {
+        if (state is AuthSuccess && state.token.isNotEmpty) {
           _navigateToDashboard(state.user.role);
         } else if (state is AuthFailure) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -677,7 +719,9 @@ class _LoginFormState extends State<LoginForm> {
 
 // Signup Form
 class SignupForm extends StatefulWidget {
-  const SignupForm({super.key});
+  const SignupForm({super.key, required this.isActive});
+
+  final bool isActive;
 
   @override
   State<SignupForm> createState() => _SignupFormState();
@@ -803,6 +847,7 @@ class _SignupFormState extends State<SignupForm> {
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<AuthBloc, AuthState>(
+      listenWhen: (_, __) => widget.isActive,
       listener: (context, state) {
         if (state is AuthSuccess) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -819,7 +864,9 @@ class _SignupFormState extends State<SignupForm> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
           );
-          _navigateToDashboard(state.user.role);
+          if (state.token.isNotEmpty) {
+            _navigateToDashboard(state.user.role);
+          }
         } else if (state is AuthFailure) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
