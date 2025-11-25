@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/auth/auth_screen.dart';
 import 'theme/app_theme.dart';
 import 'bloc/auth/auth_bloc.dart';
+import 'bloc/auth/auth_event.dart';
 import 'repositories/auth_repository.dart';
 import 'services/api_service.dart';
 
@@ -21,7 +22,8 @@ void main() async {
   );
   
   // Create AuthBloc
-  final authBloc = AuthBloc(authRepository: authRepository);
+  final authBloc = AuthBloc(authRepository: authRepository)
+    ..add(const CheckAuthStatus());
   
   runApp(MyApp(authBloc: authBloc));
 }
