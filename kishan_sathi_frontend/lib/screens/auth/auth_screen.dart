@@ -271,7 +271,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                 const Divider(),
                 const SizedBox(height: 16),
                 const Text(
-                  'Are you a Veterinary Doctor?',
+                  'Are you Doctor/Consultant?',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -752,12 +752,12 @@ class _SignupFormState extends State<SignupForm> {
       'icon': Icons.shopping_cart,
       'color': const Color(0xFF2196F3),
     },
-    {
-      'value': 'doctor',
-      'label': 'Consultant',
-      'icon': Icons.medical_services,
-      'color': const Color(0xFFFF9800),
-    },
+    // {
+    //   'value': 'doctor',
+    //   'label': 'Consultant',
+    //   'icon': Icons.medical_services,
+    //   'color': const Color(0xFFFF9800),
+    // },
   ];
 
   @override
