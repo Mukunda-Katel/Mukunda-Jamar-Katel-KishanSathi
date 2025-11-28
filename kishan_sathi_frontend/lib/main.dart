@@ -7,6 +7,7 @@ import 'bloc/auth/auth_bloc.dart';
 import 'bloc/auth/auth_event.dart';
 import 'repositories/auth_repository.dart';
 import 'services/api_service.dart';
+import 'screens/farmer/farmer_dashboard.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,7 +53,7 @@ class MyApp extends StatelessWidget {
         ),
         initialRoute: '/',
         routes: {
-          '/': (context) => const AuthScreen(),
+          '/': (context) => const FarmerDashboard(),
         },
       ),
     );
