@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
+    'django_filters',
     
     # Your apps
     'Users',
@@ -155,7 +156,7 @@ REST_FRAMEWORK = {
 }
 
 # CORS Configuration (Development only)
-CORS_ALLOW_ALL_ORIGINS = True  # Change in production
+CORS_ALLOW_ALL_ORIGINS = True  
 CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOW_METHODS = [
