@@ -231,7 +231,7 @@ class _DoctorRegistrationScreenState extends State<DoctorRegistrationScreen> {
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    'Veterinary Doctor Registration',
+                    'Consultant/Doctor Registration',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -241,7 +241,7 @@ class _DoctorRegistrationScreenState extends State<DoctorRegistrationScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Join as a veterinary consultant',
+                    'Join as a consultant',
                     style: TextStyle(fontSize: 14, color: Colors.grey),
                     textAlign: TextAlign.center,
                   ),

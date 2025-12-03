@@ -1,5 +1,14 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../theme/app_theme.dart';
+import '../../bloc/auth/auth_bloc.dart';
+import '../../bloc/auth/auth_state.dart';
+import '../../bloc/product/product_bloc.dart';
+import '../../bloc/product/product_event.dart';
+import '../../bloc/product/product_state.dart';
+import '../../repositories/product_repository.dart';
 
 class FarmerDashboard extends StatefulWidget {
   const FarmerDashboard({super.key});
@@ -21,60 +30,62 @@ class _FarmerDashboardState extends State<FarmerDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: _screens[_selectedIndex],
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          // TODO: Navigate to AI chat screen
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Row(
+    return BlocProvider(
+      create: (context) => ProductBloc(productRepository: ProductRepository()),
+      child: Scaffold(
+        body: _screens[_selectedIndex],
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Row(
+                  children: [
+                    Icon(Icons.smart_toy, color: Colors.white),
+                    SizedBox(width: 12),
+                    Text('AI Assistant - Coming Soon!'),
+                  ],
+                ),
+                backgroundColor: AppTheme.primaryGreen,
+                behavior: SnackBarBehavior.floating,
+                duration: Duration(seconds: 2),
+              ),
+            );
+          },
+          backgroundColor: AppTheme.primaryGreen,
+          icon: const Icon(Icons.smart_toy, color: Colors.white),
+          label: const Text(
+            'AI Assistant',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          elevation: 4,
+        ),
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, -5),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  Icon(Icons.smart_toy, color: Colors.white),
-                  SizedBox(width: 12),
-                  Text('AI Assistant - Coming Soon!'),
+                  _buildNavItem(Icons.home, 'Home', 0),
+                  _buildNavItem(Icons.eco, 'My Crops', 1),
+                  _buildNavItem(Icons.store, 'Market', 2),
+                  _buildNavItem(Icons.medical_services, 'Consult', 3),
+                  _buildNavItem(Icons.person, 'Profile', 4),
                 ],
               ),
-              backgroundColor: AppTheme.primaryGreen,
-              behavior: SnackBarBehavior.floating,
-              duration: Duration(seconds: 2),
-            ),
-          );
-        },
-        backgroundColor: AppTheme.primaryGreen,
-        icon: const Icon(Icons.smart_toy, color: Colors.white),
-        label: const Text(
-          'AI Assistant',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        elevation: 4,
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(Icons.home, 'Home', 0),
-                _buildNavItem(Icons.eco, 'My Crops', 1),
-                _buildNavItem(Icons.store, 'Market', 2),
-                _buildNavItem(Icons.medical_services, 'Consult', 3),
-                _buildNavItem(Icons.person, 'Profile', 4),
-              ],
             ),
           ),
         ),
@@ -120,293 +131,417 @@ class _FarmerDashboardState extends State<FarmerDashboard> {
 }
 
 // Home Screen
-class FarmerHomeScreen extends StatelessWidget {
+class FarmerHomeScreen extends StatefulWidget {
   const FarmerHomeScreen({super.key});
 
   @override
+  State<FarmerHomeScreen> createState() => _FarmerHomeScreenState();
+}
+
+class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Load farmer's products when screen initializes
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthSuccess) {
+      context.read<ProductBloc>().add(LoadMyProducts(authState.token));
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            // App Bar
-            SliverToBoxAdapter(
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppTheme.primaryGreen, AppTheme.lightGreen],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(30),
-                    bottomRight: Radius.circular(30),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, authState) {
+        // Get farmer name from auth state, fallback to "Farmer"
+        final farmerName = authState is AuthSuccess 
+            ? authState.user.fullName 
+            : 'Farmer';
+
+        return Scaffold(
+          backgroundColor: AppTheme.backgroundColor,
+          body: SafeArea(
+            child: CustomScrollView(
+              slivers: [
+                // App Bar
+                SliverToBoxAdapter(
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [AppTheme.primaryGreen, AppTheme.lightGreen],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(30),
+                        bottomRight: Radius.circular(30),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              'Welcome Back! 👋',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.9),
-                                fontSize: 16,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Ram Sharma',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Stack(
-                          children: [
-                            IconButton(
-                              onPressed: () {},
-                              icon: const Icon(
-                                Icons.notifications_outlined,
-                                color: Colors.white,
-                                size: 28,
-                              ),
-                            ),
-                            Positioned(
-                              right: 8,
-                              top: 8,
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Text(
-                                  '3',
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Welcome Back! 👋',
                                   style: TextStyle(
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  farmerName,
+                                  style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 10,
+                                    fontSize: 24,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                              ),
+                              ],
+                            ),
+                            Stack(
+                              children: [
+                                IconButton(
+                                  onPressed: () {},
+                                  icon: const Icon(
+                                    Icons.notifications_outlined,
+                                    color: Colors.white,
+                                    size: 28,
+                                  ),
+                                ),
+                                Positioned(
+                                  right: 8,
+                                  top: 8,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Text(
+                                      '3',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    // Weather Card
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white.withOpacity(0.3)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
+                        const SizedBox(height: 20),
+                        // Weather Card
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.white.withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Icon(
-                                Icons.wb_sunny,
-                                color: Colors.yellow[100],
-                                size: 40,
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.wb_sunny,
+                                    color: Colors.yellow[100],
+                                    size: 40,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  const Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '28°C',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Partly Cloudy',
+                                        style: TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 12),
-                              const Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   Text(
-                                    '28°C',
+                                    'Kathmandu',
                                     style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white.withOpacity(0.9),
+                                      fontSize: 14,
                                     ),
                                   ),
                                   Text(
-                                    'Partly Cloudy',
+                                    'Humidity: 65%',
                                     style: TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 14,
+                                      color: Colors.white.withOpacity(0.7),
+                                      fontSize: 12,
                                     ),
                                   ),
                                 ],
                               ),
                             ],
                           ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                'Kathmandu',
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.9),
-                                  fontSize: 14,
-                                ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Quick Actions
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Quick Actions',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.darkGreen,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _QuickActionCard(
+                                icon: Icons.add_circle_outline,
+                                label: 'Add Crop',
+                                color: AppTheme.primaryGreen,
+                                onTap: () {},
                               ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _QuickActionCard(
+                                icon: Icons.local_offer,
+                                label: 'Sell Product',
+                                color: const Color(0xFF2196F3),
+                                onTap: () {},
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _QuickActionCard(
+                                icon: Icons.chat_bubble_outline,
+                                label: 'Ask Expert',
+                                color: const Color(0xFFFF9800),
+                                onTap: () {},
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _QuickActionCard(
+                                icon: Icons.trending_up,
+                                label: 'Market Trends',
+                                color: const Color(0xFF9C27B0),
+                                onTap: () {},
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // My Active Crops
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'My Active Crops',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.darkGreen,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {},
+                          child: const Text(
+                            'View All',
+                            style: TextStyle(
+                              color: AppTheme.primaryGreen,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Crop Cards - BLoC Integration
+                BlocBuilder<ProductBloc, ProductState>(
+                  builder: (context, state) {
+                    if (state is ProductLoading) {
+                      return const SliverFillRemaining(
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+
+                    if (state is ProductError) {
+                      return SliverFillRemaining(
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                              const SizedBox(height: 16),
                               Text(
-                                'Humidity: 65%',
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.7),
-                                  fontSize: 12,
-                                ),
+                                'Failed to load products',
+                                style: TextStyle(color: Colors.grey[700]),
+                              ),
+                              const SizedBox(height: 8),
+                              ElevatedButton(
+                                onPressed: () {
+                                  final authState = context.read<AuthBloc>().state;
+                                  if (authState is AuthSuccess) {
+                                    context.read<ProductBloc>().add(LoadMyProducts(authState.token));
+                                  }
+                                },
+                                child: const Text('Retry'),
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+                        ),
+                      );
+                    }
 
-            // Quick Actions
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Quick Actions',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.darkGreen,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _QuickActionCard(
-                            icon: Icons.add_circle_outline,
-                            label: 'Add Crop',
-                            color: AppTheme.primaryGreen,
-                            onTap: () {},
+                    if (state is MyProductsLoaded) {
+                      if (state.myProducts.isEmpty) {
+                        return SliverFillRemaining(
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.eco_outlined, size: 64, color: Colors.grey[400]),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No products yet',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Start by adding your first product',
+                                  style: TextStyle(color: Colors.grey[500]),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _QuickActionCard(
-                            icon: Icons.local_offer,
-                            label: 'Sell Product',
-                            color: const Color(0xFF2196F3),
-                            onTap: () {},
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _QuickActionCard(
-                            icon: Icons.chat_bubble_outline,
-                            label: 'Ask Expert',
-                            color: const Color(0xFFFF9800),
-                            onTap: () {},
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _QuickActionCard(
-                            icon: Icons.trending_up,
-                            label: 'Market Trends',
-                            color: const Color(0xFF9C27B0),
-                            onTap: () {},
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
+                        );
+                      }
 
-            // My Active Crops
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'My Active Crops',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.darkGreen,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {},
-                      child: const Text(
-                        'View All',
-                        style: TextStyle(
-                          color: AppTheme.primaryGreen,
-                          fontWeight: FontWeight.w600,
+                      return SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final product = state.myProducts[index];
+                              return Padding(
+                                padding: EdgeInsets.only(
+                                  bottom: index == state.myProducts.length - 1 ? 20 : 12,
+                                ),
+                                child: _CropCard(
+                                  cropName: product.name,
+                                  area: '${product.quantity} ${product.unitDisplay}',
+                                  plantedDate: _formatDate(product.createdAt),
+                                  status: product.statusDisplay,
+                                  health: product.isAvailable ? 85 : 65,
+                                  imageUrl: product.image ?? 'assets/images/wheat.jpg',
+                                ),
+                              );
+                            },
+                            childCount: state.myProducts.length,
+                          ),
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+                      );
+                    }
 
-            // Crop Cards
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  _CropCard(
-                    cropName: 'Wheat',
-                    area: '2.5 acres',
-                    plantedDate: 'Nov 15, 2024',
-                    status: 'Growing',
-                    health: 85,
-                    imageUrl: 'assets/images/wheat.jpg',
-                  ),
-                  const SizedBox(height: 12),
-                  _CropCard(
-                    cropName: 'Rice',
-                    area: '3.0 acres',
-                    plantedDate: 'Oct 20, 2024',
-                    status: 'Growing',
-                    health: 92,
-                    imageUrl: 'assets/images/rice.jpg',
-                  ),
-                  const SizedBox(height: 12),
-                  _CropCard(
-                    cropName: 'Tomato',
-                    area: '1.0 acres',
-                    plantedDate: 'Nov 5, 2024',
-                    status: 'Needs Attention',
-                    health: 65,
-                    imageUrl: 'assets/images/tomato.jpg',
-                  ),
-                  const SizedBox(height: 20),
-                ]),
-              ),
+                    // Default: show placeholder crops
+                    return SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      sliver: SliverList(
+                        delegate: SliverChildListDelegate([
+                          const _CropCard(
+                            cropName: 'Wheat',
+                            area: '2.5 acres',
+                            plantedDate: 'Nov 15, 2024',
+                            status: 'Growing',
+                            health: 85,
+                            imageUrl: 'assets/images/wheat.jpg',
+                          ),
+                          const SizedBox(height: 12),
+                          const _CropCard(
+                            cropName: 'Rice',
+                            area: '3.0 acres',
+                            plantedDate: 'Oct 20, 2024',
+                            status: 'Growing',
+                            health: 92,
+                            imageUrl: 'assets/images/rice.jpg',
+                          ),
+                          const SizedBox(height: 12),
+                          const _CropCard(
+                            cropName: 'Tomato',
+                            area: '1.0 acres',
+                            plantedDate: 'Nov 5, 2024',
+                            status: 'Needs Attention',
+                            health: 65,
+                            imageUrl: 'assets/images/tomato.jpg',
+                          ),
+                          const SizedBox(height: 20),
+                        ]),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
+  }
+
+  String _formatDate(DateTime date) {
+    final months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 }
 
