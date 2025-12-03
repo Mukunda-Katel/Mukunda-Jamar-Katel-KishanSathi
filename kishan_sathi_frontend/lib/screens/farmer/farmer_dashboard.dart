@@ -9,6 +9,7 @@ import '../../bloc/product/product_bloc.dart';
 import '../../bloc/product/product_event.dart';
 import '../../bloc/product/product_state.dart';
 import '../../repositories/product_repository.dart';
+import 'add_product_screen.dart';
 
 class FarmerDashboard extends StatefulWidget {
   const FarmerDashboard({super.key});
@@ -34,34 +35,36 @@ class _FarmerDashboardState extends State<FarmerDashboard> {
       create: (context) => ProductBloc(productRepository: ProductRepository()),
       child: Scaffold(
         body: _screens[_selectedIndex],
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Row(
-                  children: [
-                    Icon(Icons.smart_toy, color: Colors.white),
-                    SizedBox(width: 12),
-                    Text('AI Assistant - Coming Soon!'),
-                  ],
-                ),
+        floatingActionButton: _selectedIndex == 0 || _selectedIndex == 1
+            ? FloatingActionButton.extended(
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AddProductScreen(),
+                    ),
+                  );
+                  
+                  // Reload products if a product was added
+                  if (result == true) {
+                    final authState = context.read<AuthBloc>().state;
+                    if (authState is AuthSuccess) {
+                      context.read<ProductBloc>().add(LoadMyProducts(authState.token));
+                    }
+                  }
+                },
                 backgroundColor: AppTheme.primaryGreen,
-                behavior: SnackBarBehavior.floating,
-                duration: Duration(seconds: 2),
-              ),
-            );
-          },
-          backgroundColor: AppTheme.primaryGreen,
-          icon: const Icon(Icons.smart_toy, color: Colors.white),
-          label: const Text(
-            'AI Assistant',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          elevation: 4,
-        ),
+                icon: const Icon(Icons.add, color: Colors.white),
+                label: const Text(
+                  'Add Product',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                elevation: 4,
+              )
+            : null,
         bottomNavigationBar: Container(
           decoration: BoxDecoration(
             color: Colors.white,
