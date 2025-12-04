@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/product_model.dart';
@@ -78,18 +77,27 @@ class ProductService {
     multipartRequest.headers['Authorization'] = 'Token $token';
 
     // Add fields
+    final jsonData = request.toJson();
+    print('ProductCreateRequest.toJson(): $jsonData');
     multipartRequest.fields.addAll(
-      request.toJson().map((key, value) => MapEntry(key, value.toString())),
+      jsonData.map((key, value) => MapEntry(key, value.toString())),
     );
+
+    print('Multipart fields: ${multipartRequest.fields}');
 
     // Add image if provided
     if (request.imagePath != null && request.imagePath!.isNotEmpty) {
       var file = await http.MultipartFile.fromPath('image', request.imagePath!);
       multipartRequest.files.add(file);
+      print('Image file added: ${request.imagePath}');
     }
 
+    print('Sending POST to: $uri');
     var streamedResponse = await multipartRequest.send();
     var response = await http.Response.fromStream(streamedResponse);
+
+    print('Response status: ${response.statusCode}');
+    print('Response body: ${response.body}');
 
     if (response.statusCode == 201) {
       return Product.fromJson(json.decode(response.body));
