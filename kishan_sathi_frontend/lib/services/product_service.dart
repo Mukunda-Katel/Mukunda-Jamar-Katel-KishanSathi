@@ -52,19 +52,33 @@ class ProductService {
 
   // Get farmer's own products
   Future<List<Product>> getMyProducts(String token) async {
+    print('Fetching my products with token: ${token.substring(0, 10)}...');
     final response = await http.get(
-      Uri.parse('$baseUrl/farmer/products/my_products/'),
+      Uri.parse('$baseUrl/farmer/products/?my_products=true'),
       headers: {
         'Authorization': 'Token $token',
       },
     );
 
+    print('My Products Response Status: ${response.statusCode}');
+    print('My Products Response Body: ${response.body}');
+
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      final List<dynamic> results = data['results'] ?? data;
+      // Handle both array response and paginated response
+      List<dynamic> results;
+      if (data is List) {
+        results = data;
+      } else if (data is Map && data.containsKey('results')) {
+        results = data['results'];
+      } else {
+        results = [];
+      }
+      print('Number of products found: ${results.length}');
       return results.map((json) => Product.fromJson(json)).toList();
     } else {
-      throw Exception('Failed to load my products');
+      print('Error fetching my products: ${response.body}');
+      throw Exception('Failed to load my products: ${response.body}');
     }
   }
 
