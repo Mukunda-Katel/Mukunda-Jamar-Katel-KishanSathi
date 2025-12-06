@@ -5,6 +5,7 @@ import 'screens/auth/auth_screen.dart';
 import 'theme/app_theme.dart';
 import 'bloc/auth/auth_bloc.dart';
 import 'bloc/auth/auth_event.dart';
+import 'bloc/auth/auth_state.dart';
 import 'repositories/auth_repository.dart';
 import 'services/api_service.dart';
 import 'screens/farmer/farmer_dashboard.dart';
@@ -53,10 +54,30 @@ class MyApp extends StatelessWidget {
             brightness: Brightness.light,
           ),
         ),
-        initialRoute: '/',
+        home: BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, state) {
+            if (state is AuthSuccess && state.token.isNotEmpty) {
+              // Redirect to appropriate dashboard based on role
+              switch (state.user.role) {
+                case 'farmer':
+                  return const FarmerDashboard();
+                case 'buyer':
+                  return const BuyerDashboard();
+                // case 'doctor':
+                //   return const ConsultantDashboard();
+                default:
+                  return const FarmerDashboard();
+              }
+            }
+            // Show auth screen for unauthenticated users
+            return const AuthScreen();
+          },
+        ),
         routes: {
-          '/': (context) => const BuyerDashboard(),
-          
+          '/auth': (context) => const AuthScreen(),
+          '/farmer-dashboard': (context) => const FarmerDashboard(),
+          '/buyer-dashboard': (context) => const BuyerDashboard(),
+          '/consultant-dashboard': (context) => const ConsultantDashboard(),
         },
       ),
     );

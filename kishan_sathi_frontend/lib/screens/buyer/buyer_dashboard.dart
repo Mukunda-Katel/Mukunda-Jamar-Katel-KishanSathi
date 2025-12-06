@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../theme/app_theme.dart';
 import '../../bloc/product/product_bloc.dart';
-import '../../bloc/product/product_event.dart';
-import '../../bloc/product/product_state.dart';
 import '../../repositories/product_repository.dart';
 
 class BuyerDashboard extends StatefulWidget {
@@ -166,15 +164,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
       'rating': 4.9,
       'category': 'Dairy',
     },
-    {
-      'name': 'Turmeric Powder',
-      'price': '400',
-      'unit': 'per kg',
-      'farmer': 'Bikash Thapa',
-      'location': 'Surkhet',
-      'rating': 4.5,
-      'category': 'Spices',
-    },
+    
   ];
 
   @override
