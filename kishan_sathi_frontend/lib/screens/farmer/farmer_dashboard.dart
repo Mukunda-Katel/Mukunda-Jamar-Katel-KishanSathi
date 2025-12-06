@@ -484,7 +484,9 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                                   plantedDate: _formatDate(product.createdAt),
                                   status: product.statusDisplay,
                                   health: product.isAvailable ? 85 : 65,
-                                  imageUrl: product.image ?? 'assets/images/wheat.jpg',
+                                  imageUrl: product.image,
+                                  price: '₹${product.price}',
+                                  location: product.location,
                                 ),
                               );
                             },
@@ -494,40 +496,9 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                       );
                     }
 
-                    // Default: show placeholder crops
-                    return SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      sliver: SliverList(
-                        delegate: SliverChildListDelegate([
-                          const _CropCard(
-                            cropName: 'Wheat',
-                            area: '2.5 acres',
-                            plantedDate: 'Nov 15, 2024',
-                            status: 'Growing',
-                            health: 85,
-                            imageUrl: 'assets/images/wheat.jpg',
-                          ),
-                          const SizedBox(height: 12),
-                          const _CropCard(
-                            cropName: 'Rice',
-                            area: '3.0 acres',
-                            plantedDate: 'Oct 20, 2024',
-                            status: 'Growing',
-                            health: 92,
-                            imageUrl: 'assets/images/rice.jpg',
-                          ),
-                          const SizedBox(height: 12),
-                          const _CropCard(
-                            cropName: 'Tomato',
-                            area: '1.0 acres',
-                            plantedDate: 'Nov 5, 2024',
-                            status: 'Needs Attention',
-                            health: 65,
-                            imageUrl: 'assets/images/tomato.jpg',
-                          ),
-                          const SizedBox(height: 20),
-                        ]),
-                      ),
+                    // Initial state - show loading
+                    return const SliverFillRemaining(
+                      child: Center(child: CircularProgressIndicator()),
                     );
                   },
                 ),
@@ -617,7 +588,9 @@ class _CropCard extends StatelessWidget {
   final String plantedDate;
   final String status;
   final int health;
-  final String imageUrl;
+  final String? imageUrl;
+  final String? price;
+  final String? location;
 
   const _CropCard({
     required this.cropName,
@@ -625,7 +598,9 @@ class _CropCard extends StatelessWidget {
     required this.plantedDate,
     required this.status,
     required this.health,
-    required this.imageUrl,
+    this.imageUrl,
+    this.price,
+    this.location,
   });
 
   @override
@@ -650,23 +625,52 @@ class _CropCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Container(
-            height: 140,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppTheme.primaryGreen.withOpacity(0.3), AppTheme.lightGreen.withOpacity(0.2)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            ),
-            child: Center(
-              child: Icon(
-                Icons.eco,
-                size: 60,
-                color: AppTheme.primaryGreen.withOpacity(0.5),
-              ),
-            ),
+          // Product Image
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            child: imageUrl != null && imageUrl!.isNotEmpty
+                ? Image.network(
+                    imageUrl!,
+                    height: 140,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 140,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [AppTheme.primaryGreen.withOpacity(0.3), AppTheme.lightGreen.withOpacity(0.2)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Center(
+                          child: Icon(
+                            Icons.eco,
+                            size: 60,
+                            color: AppTheme.primaryGreen.withOpacity(0.5),
+                          ),
+                        ),
+                      );
+                    },
+                  )
+                : Container(
+                    height: 140,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [AppTheme.primaryGreen.withOpacity(0.3), AppTheme.lightGreen.withOpacity(0.2)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.eco,
+                        size: 60,
+                        color: AppTheme.primaryGreen.withOpacity(0.5),
+                      ),
+                    ),
+                  ),
           ),
           Padding(
             padding: const EdgeInsets.all(16),
@@ -704,7 +708,7 @@ class _CropCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Icon(Icons.landscape, size: 16, color: Colors.grey[600]),
+                    Icon(Icons.inventory_2_outlined, size: 16, color: Colors.grey[600]),
                     const SizedBox(width: 4),
                     Text(
                       area,
@@ -725,39 +729,38 @@ class _CropCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Text(
-                      'Health: ',
-                      style: TextStyle(
-                        color: Colors.grey[700],
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: LinearProgressIndicator(
-                          value: health / 100,
-                          backgroundColor: Colors.grey[200],
-                          valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-                          minHeight: 8,
+                if (price != null) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.currency_rupee, size: 16, color: Colors.grey[600]),
+                      const SizedBox(width: 4),
+                      Text(
+                        price!,
+                        style: TextStyle(
+                          color: AppTheme.primaryGreen,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '$health%',
-                      style: TextStyle(
-                        color: statusColor,
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(width: 16),
+                      if (location != null) ...[
+                        Icon(Icons.location_on_outlined, size: 16, color: Colors.grey[600]),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            location!,
+                            style: TextStyle(
+                              color: Colors.grey[700],
+                              fontSize: 13,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 12),
                 Row(
                   children: [
