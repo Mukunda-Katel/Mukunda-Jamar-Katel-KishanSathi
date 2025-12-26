@@ -1,5 +1,5 @@
-import '../features/product/data/models/product_model.dart';
-import '../services/product_service.dart';
+import '../models/product_model.dart';
+import '../datasources/product_remote_datasource.dart';
 
 class ProductRepository {
   final ProductService _productService = ProductService();

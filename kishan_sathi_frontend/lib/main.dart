@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'screens/auth/auth_screen.dart';
-import 'theme/app_theme.dart';
-import 'bloc/auth/auth_bloc.dart';
-import 'bloc/auth/auth_event.dart';
-import 'bloc/auth/auth_state.dart';
-import 'repositories/auth_repository.dart';
-import 'services/api_service.dart';
+import 'features/auth/presentation/screens/auth_screen.dart';
+import 'core/theme/app_theme.dart';
+import 'features/auth/presentation/bloc/auth_bloc.dart';
+import 'features/auth/presentation/bloc/auth_event.dart';
+import 'features/auth/presentation/bloc/auth_state.dart';
+import 'features/auth/data/repositories/auth_repository_impl.dart';
+import 'features/auth/data/datasources/auth_remote_datasource.dart';
 import 'screens/farmer/farmer_dashboard.dart';
 import 'screens/buyer/buyer_dashboard.dart';
 import 'screens/consultant/consultant_dashboard.dart';
@@ -20,7 +20,7 @@ void main() async {
   
   // Initialize services
   final apiService = ApiService();
-  final authRepository = AuthRepository(
+  final authRepository = AuthRepositoryImpl(
     apiService: apiService,
     prefs: prefs,
   );
@@ -63,8 +63,8 @@ class MyApp extends StatelessWidget {
                   return const FarmerDashboard();
                 case 'buyer':
                   return const BuyerDashboard();
-                // case 'doctor':
-                //   return const ConsultantDashboard();
+                case 'doctor':
+                  return const ConsultantDashboard();
                 default:
                   return const FarmerDashboard();
               }
