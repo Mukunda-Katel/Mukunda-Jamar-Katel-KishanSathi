@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
 import 'package:http/http.dart' as http;
-import '../config/app_config.dart';
+import '../core/config/app_config.dart';
 
 class ApiService {
   final http.Client _client;
