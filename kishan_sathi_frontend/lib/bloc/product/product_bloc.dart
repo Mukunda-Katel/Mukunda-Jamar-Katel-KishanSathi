@@ -1,8 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'product_event.dart';
+import '../../features//product//presentation/bloc/product_event.dart';
 import 'product_state.dart';
 import '../../repositories/product_repository.dart';
-import '../../models/product_model.dart';
+import '../../features/product/data/models/product_model.dart';
 
 class ProductBloc extends Bloc<ProductEvent, ProductState> {
   final ProductRepository productRepository;
