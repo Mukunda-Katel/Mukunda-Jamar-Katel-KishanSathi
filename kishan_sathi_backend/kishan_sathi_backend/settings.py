@@ -29,16 +29,33 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
     # Third-party apps
+    
+    
+]
+
+EXTERNAL_APPS = [
+    'Users',
+    'authentication',
+    'farmer',
+    'buyer',
+    'chat',
+]
+
+INSTALLED_APPS += EXTERNAL_APPS
+
+
+
+
+# For third party apps 
+THIRD_PARTY_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
     'django_filters',
-    
-    # Your apps
-    'Users',
-    'authentication',
-    'farmer',
+    'channels',
 ]
+
+INSTALLED_APPS += THIRD_PARTY_APPS
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -71,6 +88,19 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'kishan_sathi_backend.wsgi.application'
+ASGI_APPLICATION = 'kishan_sathi_backend.asgi.application'
+
+# Channel Layers Configuration for WebSocket
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer'  # For development
+        # For production, use Redis:
+        # 'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        # 'CONFIG': {
+        #     'hosts': [('127.0.0.1', 6379)],
+        # },
+    }
+}
 
 
 # Database
@@ -82,6 +112,7 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
 
 
 # Password validation
@@ -126,8 +157,8 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # ADD: File upload settings
-FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
-DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  
 
 # Allowed file extensions for doctor certificates
 ALLOWED_CERTIFICATE_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png']
@@ -154,7 +185,6 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.BrowsableAPIRenderer',
     ],
 }
-
 # CORS Configuration (Development only)
 CORS_ALLOW_ALL_ORIGINS = True  
 CORS_ALLOW_CREDENTIALS = True
@@ -189,3 +219,6 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='Kishan Sathi <noreply@kishansathi.com>')
 ADMIN_EMAIL = config('ADMIN_EMAIL', default='admin@kishansathi.com')
+
+
+

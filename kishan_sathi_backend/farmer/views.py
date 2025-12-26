@@ -83,6 +83,18 @@ class ProductViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(farmer=self.request.user)
     
+    def create(self, request, *args, **kwargs):
+        # Use ProductCreateUpdateSerializer for validation and creation
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        
+        # Return with ProductListSerializer to include all necessary fields
+        instance = serializer.instance
+        output_serializer = ProductListSerializer(instance, context={'request': request})
+        headers = self.get_success_headers(output_serializer.data)
+        return Response(output_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+    
     def perform_update(self, serializer):
         # Ensure only the owner can update
         if serializer.instance.farmer != self.request.user:
@@ -149,7 +161,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def add_image(self, request, pk=None):
-        """Add additional image to product"""
+        #  FOr Add additional image to product
         product = self.get_object()
         if product.farmer != request.user:
             return Response(

@@ -7,7 +7,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/auth/', include('authentication.urls')),    
     path('api/farmer/', include('farmer.urls')),
-    
+    path('api/chat/', include('chat.urls')),
 ]
 
 # Serve media files in development

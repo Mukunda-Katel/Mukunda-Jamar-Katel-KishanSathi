@@ -315,7 +315,7 @@ Kishan Sathi Team
             return queryset
     
     list_filter = [
-        PendingDoctorsFilter,  # NEW: Quick filter for pending doctors
+        PendingDoctorsFilter,  
         'role',
         'is_active',
         'is_staff',
