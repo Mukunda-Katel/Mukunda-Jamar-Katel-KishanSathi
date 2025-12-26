@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../theme/app_theme.dart';
-import '../../bloc/product/product_bloc.dart';
-import '../../repositories/product_repository.dart';
+import '../../core/theme/app_theme.dart';
+import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/auth/presentation/bloc/auth_state.dart';
+import '../../features/auth/presentation/bloc/auth_event.dart';
+import '../../features/product/presentation/bloc/product_bloc.dart';
+import '../../features/product/presentation/bloc/product_event.dart';
+import '../../features/product/presentation/bloc/product_state.dart';
+import '../../features/product/data/repositories/product_repository_impl.dart';
+import 'chat_list_screen.dart';
 
 class BuyerDashboard extends StatefulWidget {
   const BuyerDashboard({super.key});
@@ -17,9 +23,10 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
   final List<Widget> _screens = [
     const BuyerHomeScreen(),
     const Center(child: Text('Community - Coming Soon')),
+    const BuyerChatListScreen(),
     const Center(child: Text('Orders - Coming Soon')),
     const Center(child: Text('Favorites - Coming Soon')),
-    const Center(child: Text('Profile - Coming Soon')),
+    const BuyerProfileScreen(),
   ];
 
   @override
@@ -47,9 +54,10 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
                 children: [
                   _buildNavItem(Icons.home, 'Home', 0),
                   _buildNavItem(Icons.groups, 'Community', 1),
-                  _buildNavItem(Icons.receipt_long, 'Orders', 2),
-                  _buildNavItem(Icons.favorite, 'Favorites', 3),
-                  _buildNavItem(Icons.person, 'Profile', 4),
+                  _buildNavItem(Icons.chat, 'Chat', 2),
+                  _buildNavItem(Icons.receipt_long, 'Orders', 3),
+                  _buildNavItem(Icons.favorite, 'Favorites', 4),
+                  _buildNavItem(Icons.person, 'Profile', 5),
                 ],
               ),
             ),
@@ -105,6 +113,8 @@ class BuyerHomeScreen extends StatefulWidget {
 }
 
 class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
+  int? _selectedCategoryId;
+  
   // Static categories data
   final List<Map<String, dynamic>> _categories = [
     {'id': 1, 'name': 'Vegetables', 'icon': Icons.local_florist},
@@ -117,55 +127,23 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
     {'id': 8, 'name': 'Organic', 'icon': Icons.nature},
   ];
 
-  // Static products data
-  final List<Map<String, dynamic>> _products = [
-    {
-      'name': 'Fresh Tomatoes',
-      'price': '80',
-      'unit': 'per kg',
-      'farmer': 'Ram Sharma',
-      'location': 'Kathmandu',
-      'rating': 4.5,
-      'category': 'Vegetables',
-    },
-    {
-      'name': 'Organic Potatoes',
-      'price': '60',
-      'unit': 'per kg',
-      'farmer': 'Sita Devi',
-      'location': 'Pokhara',
-      'rating': 4.8,
-      'category': 'Vegetables',
-    },
-    {
-      'name': 'Fresh Apples',
-      'price': '250',
-      'unit': 'per kg',
-      'farmer': 'Krishna Kumar',
-      'location': 'Mustang',
-      'rating': 4.7,
-      'category': 'Fruits',
-    },
-    {
-      'name': 'Basmati Rice',
-      'price': '120',
-      'unit': 'per kg',
-      'farmer': 'Hari Prasad',
-      'location': 'Jhapa',
-      'rating': 4.6,
-      'category': 'Grains',
-    },
-    {
-      'name': 'Fresh Milk',
-      'price': '80',
-      'unit': 'per liter',
-      'farmer': 'Gita Sharma',
-      'location': 'Chitwan',
-      'rating': 4.9,
-      'category': 'Dairy',
-    },
-    
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Load all products when screen initializes
+    context.read<ProductBloc>().add(const LoadProducts(availableOnly: true));
+  }
+
+  void _onCategorySelected(int? categoryId) {
+    setState(() {
+      _selectedCategoryId = categoryId;
+    });
+    // Reload products with category filter
+    context.read<ProductBloc>().add(LoadProducts(
+      categoryId: categoryId,
+      availableOnly: true,
+    ));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -320,7 +298,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                             label: category['name'] as String,
                             color: colors[index % colors.length],
                             onTap: () {
-                              // Filter products by category (optional)
+                              _onCategorySelected(category['id'] as int);
                             },
                           );
                         },
@@ -361,33 +339,135 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
               ),
             ),
 
-            // Product Grid - Static Data
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.75,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final product = _products[index];
-                    return _ProductCard(
-                      name: product['name'] as String,
-                      price: product['price'] as String,
-                      unit: product['unit'] as String,
-                      farmer: product['farmer'] as String,
-                      location: product['location'] as String,
-                      rating: product['rating'] as double,
-                      imageIcon: _getProductIcon(product['category'] as String),
-                      imageUrl: null,
+            // Product Grid - Dynamic Data from Backend
+            BlocBuilder<ProductBloc, ProductState>(
+              builder: (context, state) {
+                if (state is ProductLoading) {
+                  return const SliverToBoxAdapter(
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(40),
+                        child: CircularProgressIndicator(
+                          color: Color(0xFF2196F3),
+                        ),
+                      ),
+                    ),
+                  );
+                }
+
+                if (state is ProductError) {
+                  return SliverToBoxAdapter(
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(40),
+                        child: Column(
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              size: 60,
+                              color: Colors.red,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Error: ${state.message}',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () {
+                                context.read<ProductBloc>().add(
+                                  LoadProducts(
+                                    categoryId: _selectedCategoryId,
+                                    availableOnly: true,
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF2196F3),
+                                foregroundColor: Colors.white,
+                              ),
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }
+
+                if (state is ProductsLoaded) {
+                  if (state.products.isEmpty) {
+                    return const SliverToBoxAdapter(
+                      child: Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(40),
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.shopping_basket_outlined,
+                                size: 60,
+                                color: Colors.grey,
+                              ),
+                              SizedBox(height: 16),
+                              Text(
+                                'No products available',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'Check back later for fresh produce!',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     );
-                  },
-                  childCount: _products.length,
-                ),
-              ),
+                  }
+
+                  return SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    sliver: SliverGrid(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 0.75,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                      ),
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final product = state.products[index];
+                          return _ProductCard(
+                            name: product.name,
+                            price: product.price.toString(),
+                            unit: product.unit,
+                            farmer: product.farmerName,
+                            location: product.location,
+                            rating: 4.5, // You can add rating field to Product model
+                            imageIcon: _getProductIcon(product.categoryName),
+                            imageUrl: product.image,
+                            isOrganic: product.isOrganic,
+                          );
+                        },
+                        childCount: state.products.length,
+                      ),
+                    ),
+                  );
+                }
+
+                return const SliverToBoxAdapter(child: SizedBox.shrink());
+              },
             ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 20)),
@@ -395,20 +475,6 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
         ),
       ),
     );
-  }
-
-  IconData _getCategoryIcon(String categoryName) {
-    final name = categoryName.toLowerCase();
-    if (name.contains('grain') || name.contains('pulses')) return Icons.grain;
-    if (name.contains('vegetable')) return Icons.eco;
-    if (name.contains('fruit')) return Icons.apple;
-    if (name.contains('dairy')) return Icons.emoji_food_beverage;
-    if (name.contains('poultry')) return Icons.egg_alt;
-    if (name.contains('spice')) return Icons.spa;
-    if (name.contains('honey')) return Icons.water_drop;
-    if (name.contains('organic')) return Icons.local_florist;
-    if (name.contains('seed')) return Icons.scatter_plot;
-    return Icons.category;
   }
 
   IconData _getProductIcon(String categoryName) {
@@ -495,6 +561,7 @@ class _ProductCard extends StatelessWidget {
   final double rating;
   final IconData imageIcon;
   final String? imageUrl;
+  final bool isOrganic;
 
   const _ProductCard({
     required this.name,
@@ -505,6 +572,7 @@ class _ProductCard extends StatelessWidget {
     required this.rating,
     required this.imageIcon,
     this.imageUrl,
+    this.isOrganic = false,
   });
 
   @override
@@ -572,22 +640,38 @@ class _ProductCard extends StatelessWidget {
                         color: AppTheme.primaryGreen.withOpacity(0.5),
                       ),
                     ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.favorite_border,
-                        size: 16,
-                        color: Colors.grey,
+                  // Organic badge
+                  if (isOrganic)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF4CAF50),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.eco,
+                              size: 12,
+                              color: Colors.white,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'Organic',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -621,6 +705,25 @@ class _ProductCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 11,
                           color: Colors.grey[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Icon(Icons.person, size: 11, color: Colors.grey[600]),
+                      const SizedBox(width: 2),
+                      Expanded(
+                        child: Text(
+                          farmer,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -675,18 +778,6 @@ class _ProductCard extends StatelessWidget {
                           ],
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF2196F3),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.add_shopping_cart,
-                          size: 14,
-                          color: Colors.white,
-                        ),
-                      ),
                     ],
                   ),
                 ],
@@ -694,6 +785,293 @@ class _ProductCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// Buyer Profile Screen
+class BuyerProfileScreen extends StatelessWidget {
+  const BuyerProfileScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthUnauthenticated) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/auth',
+            (route) => false,
+          );
+        }
+      },
+      child: BlocBuilder<AuthBloc, AuthState>(
+        builder: (context, authState) {
+          final user = authState is AuthSuccess ? authState.user : null;
+          
+          return Scaffold(
+            backgroundColor: const Color(0xFFF5F5F5),
+            body: SafeArea(
+              child: Column(
+                children: [
+                  // Blue Header
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF2196F3),
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(30),
+                        bottomRight: Radius.circular(30),
+                      ),
+                    ),
+                    child: const Text(
+                      'Profile',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 20),
+                  
+                  // Profile Card
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          // Avatar
+                          Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2196F3).withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.person,
+                              size: 40,
+                              color: Color(0xFF2196F3),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          // Name
+                          Text(
+                            user?.fullName ?? 'John Doe',
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          // Role
+                          Text(
+                            user?.role.toUpperCase() ?? 'BUYER',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          // Email
+                          Text(
+                            user?.email ?? 'john.doe@example.com',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF2196F3),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 20),
+                  
+                  // Menu Items
+                  Expanded(
+                    child: Container(
+                      color: Colors.white,
+                      child: Column(
+                        children: [
+                          _BuyerProfileMenuItem(
+                            icon: Icons.person_outline,
+                            iconColor: const Color(0xFF2196F3),
+                            title: 'Edit Profile',
+                            onTap: () {
+                              // TODO: Navigate to edit profile
+                            },
+                          ),
+                          _BuyerProfileMenuItem(
+                            icon: Icons.notifications_outlined,
+                            iconColor: const Color(0xFF2196F3),
+                            title: 'Notifications',
+                            onTap: () {
+                              // TODO: Navigate to notifications
+                            },
+                          ),
+                          _BuyerProfileMenuItem(
+                            icon: Icons.help_outline,
+                            iconColor: const Color(0xFF2196F3),
+                            title: 'Help & Support',
+                            onTap: () {
+                              // TODO: Navigate to help & support
+                            },
+                          ),
+                          _BuyerProfileMenuItem(
+                            icon: Icons.shield_outlined,
+                            iconColor: const Color(0xFF2196F3),
+                            title: 'Privacy Policy',
+                            onTap: () {
+                              // TODO: Navigate to privacy policy
+                            },
+                          ),
+                          _BuyerProfileMenuItem(
+                            icon: Icons.info_outline,
+                            iconColor: const Color(0xFF2196F3),
+                            title: 'About',
+                            onTap: () {
+                              // TODO: Navigate to about
+                            },
+                          ),
+                          const Spacer(),
+                          // Logout Button
+                          Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: SizedBox(
+                              width: double.infinity,
+                              height: 56,
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: const Text('Logout'),
+                                      content: const Text('Are you sure you want to logout?'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                            context.read<AuthBloc>().add(LogoutRequested());
+                                          },
+                                          child: const Text(
+                                            'Logout',
+                                            style: TextStyle(color: Colors.red),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.logout),
+                                label: const Text(
+                                  'Logout',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFE53935),
+                                  foregroundColor: Colors.white,
+                                  elevation: 2,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// Buyer Profile Menu Item Widget
+class _BuyerProfileMenuItem extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final VoidCallback onTap;
+
+  const _BuyerProfileMenuItem({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: Colors.grey.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: iconColor,
+              size: 24,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              color: Colors.grey[400],
+              size: 24,
+            ),
+          ],
+        ),
       ),
     );
   }

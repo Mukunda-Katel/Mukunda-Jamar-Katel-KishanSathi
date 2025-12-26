@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import '../../theme/app_theme.dart';
-import '../../bloc/auth/auth_bloc.dart';
-import '../../bloc/auth/auth_state.dart';
-import '../../bloc/product/product_bloc.dart';
-import '../../bloc/product/product_event.dart';
-import '../../bloc/product/product_state.dart';
-import '../../repositories/product_repository.dart';
+import '../../core/theme/app_theme.dart';
+import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/auth/presentation/bloc/auth_state.dart';
+import '../../features/product/presentation/bloc/product_bloc.dart';
+import '../../features/product/presentation/bloc/product_event.dart';
+import '../../features/product/presentation/bloc/product_state.dart';
+import '../../features/product/data/repositories/product_repository_impl.dart';
 
 class AddProductScreen extends StatefulWidget {
   const AddProductScreen({super.key});
