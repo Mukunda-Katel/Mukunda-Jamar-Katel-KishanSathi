@@ -28,6 +28,7 @@ class FarmerBasicSerializer(serializers.ModelSerializer):
 class ProductListSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     farmer_name = serializers.CharField(source='farmer.full_name', read_only=True)
+    farmer_id = serializers.IntegerField(source='farmer.id', read_only=True)
     unit_display = serializers.CharField(source='get_unit_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     
@@ -36,7 +37,7 @@ class ProductListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'description', 'price', 'quantity', 'unit', 'unit_display',
             'status', 'status_display', 'is_organic', 'location', 'district',
-            'image', 'category_name', 'farmer_name', 'created_at', 'is_available'
+            'image', 'category_name', 'farmer_name', 'farmer_id', 'created_at', 'is_available'
         ]
 
 

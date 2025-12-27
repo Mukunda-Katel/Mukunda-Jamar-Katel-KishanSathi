@@ -43,25 +43,33 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
         # Add current user to participants
         all_participants = set([request.user.id] + participant_ids)
         
+        print(f"[CHAT] Looking for room with participants: {all_participants}")
+        
         # Check if chat room already exists with these participants
         existing_room = None
         for room in ChatRoom.objects.filter(participants=request.user):
             room_participants = set(room.participants.values_list('id', flat=True))
+            print(f"[CHAT] Checking room {room.id} with participants: {room_participants}")
             if room_participants == all_participants:
                 existing_room = room
+                print(f"[CHAT] Found existing room: {room.id}")
                 break
         
         if existing_room:
             serializer = self.get_serializer(existing_room)
+            print(f"[CHAT] Returning existing room {existing_room.id}")
             return Response(serializer.data, status=status.HTTP_200_OK)
         
         # Create new chat room
+        print(f"[CHAT] Creating new room")
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         chat_room = serializer.save()
         
         # Add current user to participants
         chat_room.participants.add(request.user)
+        
+        print(f"[CHAT] Created new room {chat_room.id} with participants: {list(chat_room.participants.values_list('id', flat=True))}")
         
         return Response(
             self.get_serializer(chat_room).data,
