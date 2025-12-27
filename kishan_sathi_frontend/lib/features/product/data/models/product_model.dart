@@ -55,6 +55,7 @@ class Product {
   final String? image;
   final String categoryName;
   final String farmerName;
+  final int? farmerId;
   final DateTime createdAt;
   final bool isAvailable;
 
@@ -74,6 +75,7 @@ class Product {
     this.image,
     required this.categoryName,
     required this.farmerName,
+    this.farmerId,
     required this.createdAt,
     required this.isAvailable,
   });
@@ -95,6 +97,7 @@ class Product {
       image: json['image'],
       categoryName: json['category_name'],
       farmerName: json['farmer_name'],
+      farmerId: json['farmer_id'] ?? json['farmer'],
       createdAt: DateTime.parse(json['created_at']),
       isAvailable: json['is_available'],
     );
@@ -117,6 +120,7 @@ class Product {
       'image': image,
       'category_name': categoryName,
       'farmer_name': farmerName,
+      'farmer_id': farmerId,
       'created_at': createdAt.toIso8601String(),
       'is_available': isAvailable,
     };

@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/auth/presentation/bloc/auth_state.dart';
+import '../../features/chat/presentation/bloc/chat_bloc.dart';
+import '../../features/chat/presentation/bloc/chat_event.dart';
+import '../../features/chat/presentation/bloc/chat_state.dart';
+import '../../features/chat/data/repositories/chat_repository.dart';
+import '../../features/chat/data/models/chat_models.dart';
 import '../../core/theme/app_theme.dart';
+import 'package:intl/intl.dart';
 
-class ChatScreen extends StatefulWidget {
+class ChatScreen extends StatelessWidget {
   final String userName;
   final String userRole;
   final int chatRoomId;
@@ -14,53 +23,63 @@ class ChatScreen extends StatefulWidget {
   });
 
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  Widget build(BuildContext context) {
+    final authState = context.read<AuthBloc>().state;
+    final token = authState is AuthSuccess ? authState.token : '';
+
+    return BlocProvider(
+      create: (context) => ChatBloc(
+        chatRepository: ChatRepository(),
+        token: token,
+      )..add(LoadMessages(roomId: chatRoomId)),
+      child: _ChatScreenContent(
+        userName: userName,
+        userRole: userRole,
+        chatRoomId: chatRoomId,
+      ),
+    );
+  }
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenContent extends StatefulWidget {
+  final String userName;
+  final String userRole;
+  final int chatRoomId;
+
+  const _ChatScreenContent({
+    required this.userName,
+    required this.userRole,
+    required this.chatRoomId,
+  });
+
+  @override
+  State<_ChatScreenContent> createState() => _ChatScreenContentState();
+}
+
+class _ChatScreenContentState extends State<_ChatScreenContent> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
   bool _isTyping = false;
+  int? _currentUserId;
+  List<ChatMessage> _messages = [];
 
-  // Sample messages - will be replaced with real data from API
-  final List<Map<String, dynamic>> _messages = [
-    {
-      'id': 1,
-      'content': 'Hello! I saw your rice listing.',
-      'isSent': false,
-      'timestamp': '10:30 AM',
-      'isRead': true,
-    },
-    {
-      'id': 2,
-      'content': 'Yes, it\'s still available. How much do you need?',
-      'isSent': true,
-      'timestamp': '10:32 AM',
-      'isRead': true,
-    },
-    {
-      'id': 3,
-      'content': 'I need about 50 kg. What\'s your price?',
-      'isSent': false,
-      'timestamp': '10:33 AM',
-      'isRead': true,
-    },
-    {
-      'id': 4,
-      'content': 'For 50 kg, I can offer ₹2,500. The quality is premium.',
-      'isSent': true,
-      'timestamp': '10:35 AM',
-      'isRead': true,
-    },
-    {
-      'id': 5,
-      'content': 'That sounds good. Can you deliver to my location?',
-      'isSent': false,
-      'timestamp': '10:36 AM',
-      'isRead': true,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthSuccess) {
+      _currentUserId = authState.user.id;
+    }
+    // Mark messages as read when opening chat
+    Future.delayed(Duration.zero, () {
+      context.read<ChatBloc>().add(MarkMessagesAsRead(roomId: widget.chatRoomId));
+    });
+    // Scroll to bottom after messages load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 500), _scrollToBottom);
+    });
+  }
 
   @override
   void dispose() {
@@ -73,7 +92,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
+        0.0,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
@@ -83,19 +102,33 @@ class _ChatScreenState extends State<ChatScreen> {
   void _sendMessage() {
     if (_messageController.text.trim().isEmpty) return;
 
-    setState(() {
-      _messages.add({
-        'id': _messages.length + 1,
-        'content': _messageController.text.trim(),
-        'isSent': true,
-        'timestamp': TimeOfDay.now().format(context),
-        'isRead': false,
-      });
-      _messageController.clear();
-    });
+    final content = _messageController.text.trim();
+    _messageController.clear();
+
+    context.read<ChatBloc>().add(
+      SendMessage(
+        chatRoomId: widget.chatRoomId,
+        content: content,
+      ),
+    );
 
     // Scroll to bottom after sending
-    Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
+    Future.delayed(const Duration(milliseconds: 300), _scrollToBottom);
+  }
+
+  String _formatMessageTime(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+    
+    if (difference.inDays == 0) {
+      return DateFormat('HH:mm').format(timestamp);
+    } else if (difference.inDays == 1) {
+      return 'Yesterday ${DateFormat('HH:mm').format(timestamp)}';
+    } else if (difference.inDays < 7) {
+      return DateFormat('EEE HH:mm').format(timestamp);
+    } else {
+      return DateFormat('MMM d, HH:mm').format(timestamp);
+    }
   }
 
   @override
@@ -206,37 +239,143 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Messages List
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                return _buildMessageBubble(message);
-              },
-            ),
-          ),
+      body: BlocConsumer<ChatBloc, ChatState>(
+        listener: (context, state) {
+          if (state is MessageSent) {
+            context.read<ChatBloc>().add(LoadMessages(roomId: widget.chatRoomId));
+          }
+          if (state is MessagesLoaded) {
+            setState(() {
+              _messages = state.messages;
+            });
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              Future.delayed(const Duration(milliseconds: 300), _scrollToBottom);
+            });
+          }
+        },
+        builder: (context, state) {
+          return Column(
+            children: [
+              // Messages List
+              Expanded(
+                child: state is ChatLoading && _messages.isEmpty
+                    ? Center(
+                        child: CircularProgressIndicator(
+                          color: AppTheme.primaryGreen,
+                        ),
+                      )
+                    : state is ChatError && _messages.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.error_outline,
+                                  size: 60,
+                                  color: Colors.red,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Error loading messages',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 40),
+                                  child: Text(
+                                    state.message,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    context.read<ChatBloc>().add(
+                                          LoadMessages(roomId: widget.chatRoomId),
+                                        );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primaryGreen,
+                                  ),
+                                  child: const Text('Retry'),
+                                ),
+                              ],
+                            ),
+                          )
+                        : _messages.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.chat_bubble_outline,
+                                      size: 60,
+                                      color: Colors.grey[400],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'No messages yet',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Send a message to start the conversation',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[500],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : RefreshIndicator(
+                                onRefresh: () async {
+                                  context.read<ChatBloc>().add(
+                                        LoadMessages(roomId: widget.chatRoomId),
+                                      );
+                                },
+                                child: ListView.builder(
+                                  controller: _scrollController,
+                                  reverse: true,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 16,
+                                  ),
+                                  itemCount: _messages.length,
+                                  itemBuilder: (context, index) {
+                                    final message = _messages[index];
+                                    return _buildMessageBubble(message);
+                                  },
+                                ),
+                              ),
+              ),
 
-          // Typing indicator (optional)
-          if (_isTyping)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  Text(
-                    '${widget.userName} is typing',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  SizedBox(
+              // Typing indicator (optional)
+              if (_isTyping)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      Text(
+                        '${widget.userName} is typing',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      SizedBox(
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(
@@ -335,13 +474,15 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
           ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildMessageBubble(Map<String, dynamic> message) {
-    final isSent = message['isSent'] as bool;
+  Widget _buildMessageBubble(ChatMessage message) {
+    final isSent = message.sender.id == _currentUserId;
     
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -387,7 +528,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    message['content'],
+                    message.content,
                     style: TextStyle(
                       fontSize: 15,
                       color: isSent ? Colors.white : Colors.black87,
@@ -399,7 +540,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        message['timestamp'],
+                        _formatMessageTime(message.timestamp),
                         style: TextStyle(
                           fontSize: 11,
                           color: isSent ? Colors.white.withOpacity(0.8) : Colors.grey[600],
@@ -408,9 +549,9 @@ class _ChatScreenState extends State<ChatScreen> {
                       if (isSent) ...[
                         const SizedBox(width: 4),
                         Icon(
-                          message['isRead'] ? Icons.done_all : Icons.done,
+                          message.isRead ? Icons.done_all : Icons.done,
                           size: 14,
-                          color: message['isRead'] ? Colors.blue[300] : Colors.white.withOpacity(0.8),
+                          color: message.isRead ? Colors.white : Colors.white.withOpacity(0.7),
                         ),
                       ],
                     ],

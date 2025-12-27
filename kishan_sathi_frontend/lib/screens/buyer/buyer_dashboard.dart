@@ -8,7 +8,12 @@ import '../../features/product/presentation/bloc/product_bloc.dart';
 import '../../features/product/presentation/bloc/product_event.dart';
 import '../../features/product/presentation/bloc/product_state.dart';
 import '../../features/product/data/repositories/product_repository_impl.dart';
+import '../../features/chat/presentation/bloc/chat_bloc.dart';
+import '../../features/chat/presentation/bloc/chat_event.dart';
+import '../../features/chat/presentation/bloc/chat_state.dart';
+import '../../features/chat/data/repositories/chat_repository.dart';
 import 'chat_list_screen.dart';
+import 'chat_screen.dart';
 
 class BuyerDashboard extends StatefulWidget {
   const BuyerDashboard({super.key});
@@ -453,8 +458,9 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                             price: product.price.toString(),
                             unit: product.unit,
                             farmer: product.farmerName,
+                            farmerId: product.farmerId,
                             location: product.location,
-                            rating: 4.5, // You can add rating field to Product model
+                            rating: 4.5,
                             imageIcon: _getProductIcon(product.categoryName),
                             imageUrl: product.image,
                             isOrganic: product.isOrganic,
@@ -557,6 +563,7 @@ class _ProductCard extends StatelessWidget {
   final String price;
   final String unit;
   final String farmer;
+  final int? farmerId;
   final String location;
   final double rating;
   final IconData imageIcon;
@@ -568,6 +575,7 @@ class _ProductCard extends StatelessWidget {
     required this.price,
     required this.unit,
     required this.farmer,
+    this.farmerId,
     required this.location,
     required this.rating,
     required this.imageIcon,
@@ -778,6 +786,103 @@ class _ProductCard extends StatelessWidget {
                           ],
                         ),
                       ),
+                      if (farmerId != null)
+                        GestureDetector(
+                          onTap: () async {
+                            // Get the auth token
+                            final authBloc = context.read<AuthBloc>();
+                            final authState = authBloc.state;
+                            
+                            if (authState is! AuthSuccess) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Please log in to chat'),
+                                ),
+                              );
+                              return;
+                            }
+
+                          // Show loading indicator
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (context) => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
+
+                            try {
+                              // Create or get chat room with the farmer
+                              final chatBloc = ChatBloc(
+                                chatRepository: ChatRepository(),
+                                token: authState.token,
+                              );
+                              
+                              // Listen for the ChatRoomCreated state
+                              final subscription = chatBloc.stream.listen((state) {
+                                if (state is ChatRoomCreated) {
+                                  // Close loading dialog
+                                  if (context.mounted) {
+                                    Navigator.pop(context);
+                                    
+                                    // Navigate to chat screen with actual room ID
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => BuyerChatScreen(
+                                          userName: farmer,
+                                          userRole: 'Farmer',
+                                          chatRoomId: state.chatRoom.id,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                } else if (state is ChatError) {
+                                  // Close loading dialog and show error
+                                  if (context.mounted) {
+                                    Navigator.pop(context);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Failed to create chat: ${state.message}'),
+                                      ),
+                                    );
+                                  }
+                                }
+                              });
+                              
+                              // Trigger the creation
+                              chatBloc.add(CreateChatRoom(
+                                participantIds: [farmerId!],
+                              ));
+                              
+                              // Cancel subscription after 10 seconds to prevent memory leaks
+                              Future.delayed(const Duration(seconds: 10), () {
+                                subscription.cancel();
+                              });
+                            } catch (e) {
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Failed to create chat: $e'),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2196F3),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.chat_bubble,
+                              size: 16,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ],

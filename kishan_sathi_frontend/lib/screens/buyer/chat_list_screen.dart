@@ -1,5 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/auth/presentation/bloc/auth_state.dart';
+import '../../features/chat/presentation/bloc/chat_bloc.dart';
+import '../../features/chat/presentation/bloc/chat_event.dart';
+import '../../features/chat/presentation/bloc/chat_state.dart';
+import '../../features/chat/data/repositories/chat_repository.dart';
 import 'chat_screen.dart';
+import 'package:intl/intl.dart';
 
 class BuyerChatListScreen extends StatefulWidget {
   const BuyerChatListScreen({super.key});
@@ -8,37 +16,60 @@ class BuyerChatListScreen extends StatefulWidget {
   State<BuyerChatListScreen> createState() => _BuyerChatListScreenState();
 }
 
-class _BuyerChatListScreenState extends State<BuyerChatListScreen> {
-  // Sample chat data - will be replaced with real data from API
-  final List<Map<String, dynamic>> _chats = [
-    {
-      'id': 1,
-      'userName': 'Ramesh Kumar',
-      'userRole': 'Farmer',
-      'lastMessage': 'Yes, the vegetables are fresh and available.',
-      'timestamp': '5m ago',
-      'unreadCount': 1,
-      'avatarUrl': null,
-    },
-    {
-      'id': 2,
-      'userName': 'Suresh Patel',
-      'userRole': 'Farmer',
-      'lastMessage': 'I can deliver tomorrow morning.',
-      'timestamp': '2h ago',
-      'unreadCount': 0,
-      'avatarUrl': null,
-    },
-    {
-      'id': 3,
-      'userName': 'Mahesh Singh',
-      'userRole': 'Farmer',
-      'lastMessage': 'The price is negotiable for bulk orders.',
-      'timestamp': '1d ago',
-      'unreadCount': 3,
-      'avatarUrl': null,
-    },
-  ];
+class _BuyerChatListScreenState extends State<BuyerChatListScreen> with RouteAware {
+  late ChatBloc _chatBloc;
+
+  @override
+  void initState() {
+    super.initState();
+    final authState = context.read<AuthBloc>().state;
+    final token = authState is AuthSuccess ? authState.token : '';
+    _chatBloc = ChatBloc(
+      chatRepository: ChatRepository(),
+      token: token,
+    )..add(LoadChatRooms());
+  }
+
+  @override
+  void dispose() {
+    _chatBloc.close();
+    super.dispose();
+  }
+
+  void _refreshChatList() {
+    _chatBloc.add(LoadChatRooms());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider.value(
+      value: _chatBloc,
+      child: _BuyerChatListView(onRefresh: _refreshChatList),
+    );
+  }
+}
+
+class _BuyerChatListView extends StatelessWidget {
+  final VoidCallback onRefresh;
+  
+  const _BuyerChatListView({required this.onRefresh});
+
+  String _formatTimestamp(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+
+    if (difference.inMinutes < 1) {
+      return 'Just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}d ago';
+    } else {
+      return DateFormat('MMM d').format(timestamp);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +77,6 @@ class _BuyerChatListScreenState extends State<BuyerChatListScreen> {
       backgroundColor: Colors.grey[50],
       body: Column(
         children: [
-          // Header
           Container(
             decoration: BoxDecoration(
               color: const Color(0xFF2196F3),
@@ -81,7 +111,6 @@ class _BuyerChatListScreenState extends State<BuyerChatListScreen> {
                     const Spacer(),
                     IconButton(
                       onPressed: () {
-                        // TODO: Search messages
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Search feature coming soon!'),
@@ -99,40 +128,132 @@ class _BuyerChatListScreenState extends State<BuyerChatListScreen> {
               ),
             ),
           ),
-
-          // Chat List
           Expanded(
-            child: _chats.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: _chats.length,
-                    itemBuilder: (context, index) {
-                      final chat = _chats[index];
-                      return _buildChatItem(chat);
+            child: BlocBuilder<ChatBloc, ChatState>(
+              builder: (context, state) {
+                if (state is ChatLoading) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF2196F3),
+                    ),
+                  );
+                }
+
+                if (state is ChatError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 60,
+                          color: Colors.red,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Error loading chats',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 40),
+                          child: Text(
+                            state.message,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            onRefresh();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2196F3),
+                          ),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                if (state is ChatRoomsLoaded) {
+                  if (state.chatRooms.isEmpty) {
+                    return _buildEmptyState(context);
+                  }
+
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      onRefresh();
                     },
-                  ),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: state.chatRooms.length,
+                      itemBuilder: (context, index) {
+                        final chatRoom = state.chatRooms[index];
+                        final otherUser = chatRoom.otherUser;
+                        
+                        if (otherUser == null) return const SizedBox.shrink();
+
+                        return _buildChatItem(
+                          context,
+                          chatRoom.id,
+                          otherUser.fullName,
+                          otherUser.role,
+                          chatRoom.lastMessage?.content ?? 'No messages yet',
+                          _formatTimestamp(
+                            chatRoom.lastMessage?.timestamp ?? chatRoom.createdAt,
+                          ),
+                          chatRoom.unreadCount,
+                        );
+                      },
+                    ),
+                  );
+                }
+
+                return _buildEmptyState(context);
+              },
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildChatItem(Map<String, dynamic> chat) {
-    final hasUnread = chat['unreadCount'] > 0;
+  Widget _buildChatItem(
+    BuildContext context,
+    int roomId,
+    String userName,
+    String userRole,
+    String lastMessage,
+    String timestamp,
+    int unreadCount,
+  ) {
+    final hasUnread = unreadCount > 0;
     
     return InkWell(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        // Navigate to chat screen and wait for result
+        await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => BuyerChatScreen(
-              userName: chat['userName'],
-              userRole: chat['userRole'],
-              chatRoomId: chat['id'],
+              userName: userName,
+              userRole: userRole,
+              chatRoomId: roomId,
             ),
           ),
         );
+        // Refresh chat list when returning from chat screen
+        onRefresh();
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -152,12 +273,11 @@ class _BuyerChatListScreenState extends State<BuyerChatListScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Avatar
               CircleAvatar(
                 radius: 28,
                 backgroundColor: const Color(0xFF2196F3).withOpacity(0.1),
                 child: Text(
-                  chat['userName'][0].toUpperCase(),
+                  userName[0].toUpperCase(),
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -166,8 +286,6 @@ class _BuyerChatListScreenState extends State<BuyerChatListScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              
-              // Chat Info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,10 +293,9 @@ class _BuyerChatListScreenState extends State<BuyerChatListScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Name
                         Expanded(
                           child: Text(
-                            chat['userName'],
+                            userName,
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: hasUnread ? FontWeight.bold : FontWeight.w600,
@@ -188,9 +305,8 @@ class _BuyerChatListScreenState extends State<BuyerChatListScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        // Timestamp
                         Text(
-                          chat['timestamp'],
+                          timestamp,
                           style: TextStyle(
                             fontSize: 12,
                             color: hasUnread ? const Color(0xFF2196F3) : Colors.grey[600],
@@ -200,17 +316,15 @@ class _BuyerChatListScreenState extends State<BuyerChatListScreen> {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    
-                    // Role Badge
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: const Color(0xFF2196F3).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Text(
-                        'Farmer',
-                        style: TextStyle(
+                      child: Text(
+                        userRole,
+                        style: const TextStyle(
                           fontSize: 10,
                           color: Color(0xFF2196F3),
                           fontWeight: FontWeight.w600,
@@ -218,13 +332,11 @@ class _BuyerChatListScreenState extends State<BuyerChatListScreen> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    
-                    // Last Message
                     Row(
                       children: [
                         Expanded(
                           child: Text(
-                            chat['lastMessage'],
+                            lastMessage,
                             style: TextStyle(
                               fontSize: 14,
                               color: hasUnread ? Colors.black87 : Colors.grey[600],
@@ -243,7 +355,7 @@ class _BuyerChatListScreenState extends State<BuyerChatListScreen> {
                               shape: BoxShape.circle,
                             ),
                             child: Text(
-                              '${chat['unreadCount']}',
+                              '$unreadCount',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 12,
@@ -264,7 +376,7 @@ class _BuyerChatListScreenState extends State<BuyerChatListScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
