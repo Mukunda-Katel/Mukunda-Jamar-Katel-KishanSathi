@@ -14,11 +14,21 @@ class MessageSerializer(serializers.ModelSerializer):
     """Serializer for chat messages"""
     sender = UserSerializer(read_only=True)
     sender_id = serializers.IntegerField(write_only=True, required=False)
+    image = serializers.ImageField(required=False, allow_null=True, write_only=True)
+    image_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Message
-        fields = ['id', 'chat_room', 'sender', 'sender_id', 'content', 'timestamp', 'is_read']
-        read_only_fields = ['timestamp']
+        fields = ['id', 'chat_room', 'sender', 'sender_id', 'content', 'image', 'image_url', 'timestamp', 'is_read']
+        read_only_fields = ['timestamp', 'image_url']
+    
+    def get_image_url(self, obj):
+        if obj.image:
+            request = self.context.get('request')
+            if request is not None:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        return None
 
 
 class ChatRoomSerializer(serializers.ModelSerializer):
@@ -90,8 +100,17 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
     def get_last_message(self, obj):
         last_msg = obj.messages.order_by('-timestamp').first()
         if last_msg:
+            request = self.context.get('request')
+            image_url = None
+            if last_msg.image:
+                if request is not None:
+                    image_url = request.build_absolute_uri(last_msg.image.url)
+                else:
+                    image_url = last_msg.image.url
+            
             return {
                 'content': last_msg.content,
+                'image': image_url,
                 'timestamp': last_msg.timestamp,
                 'sender_id': last_msg.sender.id
             }

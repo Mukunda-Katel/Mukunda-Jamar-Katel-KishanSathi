@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.db.models import Q, Max
 from .models import ChatRoom, Message
 from .serializers import ChatRoomSerializer, ChatRoomListSerializer, MessageSerializer
@@ -87,7 +88,7 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
         offset = int(request.query_params.get('offset', 0))
         
         messages = chat_room.messages.order_by('-timestamp')[offset:offset + limit]
-        serializer = MessageSerializer(messages, many=True)
+        serializer = MessageSerializer(messages, many=True, context={'request': request})
         
         return Response({
             'count': chat_room.messages.count(),
@@ -109,6 +110,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     """
     serializer_class = MessageSerializer
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
     
     def get_queryset(self):
         """Get messages where the user is a participant of the chat room"""
@@ -150,6 +152,6 @@ class MessageViewSet(viewsets.ModelViewSet):
         message = serializer.save(sender=request.user)
         
         return Response(
-            MessageSerializer(message).data,
+            MessageSerializer(message, context={'request': request}).data,
             status=status.HTTP_201_CREATED
         )

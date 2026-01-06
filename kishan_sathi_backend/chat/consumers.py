@@ -131,7 +131,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     
     async def typing_indicator(self, event):
         """Send typing indicator to WebSocket"""
-        # Don't send typing indicator to the sender
+
         if event['user_id'] != self.user.id:
             await self.send(text_data=json.dumps({
                 'type': 'typing',
