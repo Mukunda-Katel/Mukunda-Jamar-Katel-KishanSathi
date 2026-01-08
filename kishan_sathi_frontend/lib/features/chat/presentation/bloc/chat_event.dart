@@ -25,10 +25,12 @@ class LoadMessages extends ChatEvent {
 class SendMessage extends ChatEvent {
   final int chatRoomId;
   final String content;
+  final String? imagePath;
 
   SendMessage({
     required this.chatRoomId,
     required this.content,
+    this.imagePath,
   });
 }
 

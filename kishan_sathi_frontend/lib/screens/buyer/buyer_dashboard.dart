@@ -14,6 +14,7 @@ import '../../features/chat/presentation/bloc/chat_state.dart';
 import '../../features/chat/data/repositories/chat_repository.dart';
 import 'chat_list_screen.dart';
 import 'chat_screen.dart';
+import '../community/community_feed_screen.dart';
 
 class BuyerDashboard extends StatefulWidget {
   const BuyerDashboard({super.key});
@@ -27,7 +28,7 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
 
   final List<Widget> _screens = [
     const BuyerHomeScreen(),
-    const Center(child: Text('Community - Coming Soon')),
+    const CommunityFeedScreen(),
     const BuyerChatListScreen(),
     const Center(child: Text('Orders - Coming Soon')),
     const Center(child: Text('Favorites - Coming Soon')),

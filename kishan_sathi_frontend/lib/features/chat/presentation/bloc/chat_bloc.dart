@@ -80,6 +80,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         token,
         event.chatRoomId,
         event.content,
+        imagePath: event.imagePath,
       );
       emit(MessageSent(message: message));
     } catch (e) {

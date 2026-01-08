@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../../../../core/config/api_config.dart';
 import '../models/chat_models.dart';
@@ -85,25 +86,63 @@ class ChatRemoteDataSource {
   Future<ChatMessage> sendMessage(
     String token,
     int chatRoomId,
-    String content,
-  ) async {
-    final response = await client.post(
-      Uri.parse('${ApiConfig.baseUrl}/chat/messages/'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Token $token',
-      },
-      body: json.encode(SendMessageRequest(
-        chatRoom: chatRoomId,
-        content: content,
-      ).toJson()),
-    );
+    String content, {
+    String? imagePath,
+  }) async {
+    try {
+      if (imagePath != null) {
+        // Send message with image using multipart
+        var request = http.MultipartRequest(
+          'POST',
+          Uri.parse('${ApiConfig.baseUrl}/chat/messages/'),
+        );
 
-    if (response.statusCode == 201) {
-      final data = json.decode(response.body);
-      return ChatMessage.fromJson(data);
-    } else {
-      throw Exception('Failed to send message: ${response.body}');
+        request.headers['Authorization'] = 'Token $token';
+        request.fields['chat_room'] = chatRoomId.toString();
+        
+        if (content.isNotEmpty) {
+          request.fields['content'] = content;
+        }
+
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'image',
+            imagePath,
+          ),
+        );
+
+        final streamedResponse = await request.send();
+        final response = await http.Response.fromStream(streamedResponse);
+
+        if (response.statusCode == 201) {
+          final data = json.decode(response.body);
+          return ChatMessage.fromJson(data);
+        } else {
+          throw Exception('Failed to send message with image: ${response.body}');
+        }
+      } else {
+        // Send text-only message
+        final response = await client.post(
+          Uri.parse('${ApiConfig.baseUrl}/chat/messages/'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Token $token',
+          },
+          body: json.encode(SendMessageRequest(
+            chatRoom: chatRoomId,
+            content: content,
+          ).toJson()),
+        );
+
+        if (response.statusCode == 201) {
+          final data = json.decode(response.body);
+          return ChatMessage.fromJson(data);
+        } else {
+          throw Exception('Failed to send message: ${response.body}');
+        }
+      }
+    } catch (e) {
+      throw Exception('Failed to send message: $e');
     }
   }
 

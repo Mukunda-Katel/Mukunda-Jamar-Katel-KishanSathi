@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/bloc/auth_state.dart';
 import '../../features/chat/presentation/bloc/chat_bloc.dart';
@@ -60,9 +62,11 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
+  final ImagePicker _picker = ImagePicker();
   bool _isTyping = false;
   int? _currentUserId;
   List<ChatMessage> _messages = [];
+  File? _selectedImage;
 
   @override
   void initState() {
@@ -100,20 +104,47 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
   }
 
   void _sendMessage() {
-    if (_messageController.text.trim().isEmpty) return;
-
     final content = _messageController.text.trim();
+    
+    if (content.isEmpty && _selectedImage == null) return;
+
     _messageController.clear();
 
     context.read<ChatBloc>().add(
       SendMessage(
         chatRoomId: widget.chatRoomId,
         content: content,
+        imagePath: _selectedImage?.path,
       ),
     );
 
+    setState(() {
+      _selectedImage = null;
+    });
+
     // Scroll to bottom after sending
     Future.delayed(const Duration(milliseconds: 300), _scrollToBottom);
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+      
+      if (image != null) {
+        setState(() {
+          _selectedImage = File(image.path);
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to pick image: $e')),
+      );
+    }
   }
 
   String _formatMessageTime(DateTime timestamp) {
@@ -402,72 +433,113 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
             child: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: Row(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Attachment button
-                    IconButton(
-                      onPressed: () {
-                        // TODO: Show attachment options
-                        showModalBottomSheet(
-                          context: context,
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                          ),
-                          builder: (context) => _buildAttachmentOptions(),
-                        );
-                      },
-                      icon: Icon(
-                        Icons.add_circle,
-                        color: AppTheme.primaryGreen,
-                        size: 28,
-                      ),
-                    ),
-
-                    // Text input
-                    Expanded(
-                      child: Container(
+                    // Image preview
+                    if (_selectedImage != null)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        child: TextField(
-                          controller: _messageController,
-                          focusNode: _focusNode,
-                          maxLines: null,
-                          textCapitalization: TextCapitalization.sentences,
-                          decoration: InputDecoration(
-                            hintText: 'Type a message...',
-                            hintStyle: TextStyle(color: Colors.grey[500]),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 10,
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(
+                                _selectedImage!,
+                                width: 60,
+                                height: 60,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Image selected',
+                                style: TextStyle(
+                                  color: Colors.grey[700],
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () {
+                                setState(() {
+                                  _selectedImage = null;
+                                });
+                              },
+                              icon: Icon(
+                                Icons.close,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    // Input row
+                    Row(
+                      children: [
+                        // Attachment button
+                        IconButton(
+                          onPressed: _pickImage,
+                          icon: Icon(
+                            Icons.image,
+                            color: AppTheme.primaryGreen,
+                            size: 28,
+                          ),
+                        ),
+
+                        // Text input
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            child: TextField(
+                              controller: _messageController,
+                              focusNode: _focusNode,
+                              maxLines: null,
+                              textCapitalization: TextCapitalization.sentences,
+                              decoration: InputDecoration(
+                                hintText: 'Type a message...',
+                                hintStyle: TextStyle(color: Colors.grey[500]),
+                                border: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 10,
+                                ),
+                              ),
+                              onChanged: (value) {
+                                // TODO: Send typing indicator via WebSocket
+                              },
                             ),
                           ),
-                          onChanged: (value) {
-                            // TODO: Send typing indicator via WebSocket
-                          },
                         ),
-                      ),
-                    ),
 
-                    const SizedBox(width: 8),
+                        const SizedBox(width: 8),
 
-                    // Send button
-                    GestureDetector(
-                      onTap: _sendMessage,
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryGreen,
-                          shape: BoxShape.circle,
+                        // Send button
+                        GestureDetector(
+                          onTap: _sendMessage,
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryGreen,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.send,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.send,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
+                      ],
                     ),
                   ],
                 ),
@@ -483,6 +555,8 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
 
   Widget _buildMessageBubble(ChatMessage message) {
     final isSent = message.sender.id == _currentUserId;
+    final hasImage = message.image != null && message.image!.isNotEmpty;
+    final hasText = message.content.isNotEmpty;
     
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -527,14 +601,63 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    message.content,
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: isSent ? Colors.white : Colors.black87,
-                      height: 1.4,
+                  if (hasImage) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        message.image!,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            height: 200,
+                            alignment: Alignment.center,
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                              color: isSent ? Colors.white : AppTheme.primaryGreen,
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            height: 200,
+                            alignment: Alignment.center,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.broken_image,
+                                  size: 48,
+                                  color: isSent ? Colors.white70 : Colors.grey,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Failed to load image',
+                                  style: TextStyle(
+                                    color: isSent ? Colors.white70 : Colors.grey,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                  ),
+                    if (hasText) const SizedBox(height: 8),
+                  ],
+                  if (hasText)
+                    Text(
+                      message.content,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: isSent ? Colors.white : Colors.black87,
+                        height: 1.4,
+                      ),
+                    ),
                   const SizedBox(height: 4),
                   Row(
                     mainAxisSize: MainAxisSize.min,

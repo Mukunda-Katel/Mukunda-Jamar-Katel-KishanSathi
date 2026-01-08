@@ -49,10 +49,16 @@ class ChatRepository {
   Future<ChatMessage> sendMessage(
     String token,
     int chatRoomId,
-    String content,
-  ) async {
+    String content, {
+    String? imagePath,
+  }) async {
     try {
-      return await remoteDataSource.sendMessage(token, chatRoomId, content);
+      return await remoteDataSource.sendMessage(
+        token,
+        chatRoomId,
+        content,
+        imagePath: imagePath,
+      );
     } catch (e) {
       throw Exception('Failed to send message: $e');
     }

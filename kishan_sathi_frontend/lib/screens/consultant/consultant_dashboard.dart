@@ -1,5 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../../core/theme/app_theme.dart';
+import '../../services/consultation_service.dart';
+import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/auth/presentation/bloc/auth_state.dart';
+import '../../features/auth/presentation/bloc/auth_event.dart';
+import '../farmer/chat_screen.dart';
 
 class ConsultantDashboard extends StatefulWidget {
 const ConsultantDashboard({super.key});
@@ -21,7 +29,16 @@ const ConsultantProfileScreen(),
 
 @override
 Widget build(BuildContext context) {
-return Scaffold(
+return BlocListener<AuthBloc, AuthState>(
+listener: (context, state) {
+if (state is AuthUnauthenticated) {
+Navigator.of(context).pushNamedAndRemoveUntil(
+'/auth',
+(route) => false,
+);
+}
+},
+child: Scaffold(
 body: _screens[_selectedIndex],
 floatingActionButton: _selectedIndex == 3 // Only show on Knowledge Base screen
 ? FloatingActionButton.extended(
@@ -58,11 +75,12 @@ child: Row(
 mainAxisAlignment: MainAxisAlignment.spaceAround,
 children: [
 _buildNavItem(Icons.dashboard, 'Home', 0),
-_buildNavItem(Icons.calendar_today, 'Appointments', 1),
+_buildNavItem(Icons.post_add, 'Community', 1),
 _buildNavItem(Icons.chat_bubble, 'Chats', 2),
 _buildNavItem(Icons.library_books, 'Knowledge', 3),
 _buildNavItem(Icons.person, 'Profile', 4),
 ],
+),
 ),
 ),
 ),
@@ -118,57 +136,61 @@ builder: (context) => const CreateArticleBottomSheet(),
 
 // Consultant Home Screen
 class ConsultantHomeScreen extends StatelessWidget {
-const ConsultantHomeScreen({super.key});
+  const ConsultantHomeScreen({super.key});
 
-@override
-Widget build(BuildContext context) {
-return Scaffold(
-backgroundColor: AppTheme.backgroundColor,
-body: SafeArea(
-child: CustomScrollView(
-slivers: [
-// App Bar
-SliverToBoxAdapter(
-child: Container(
-padding: const EdgeInsets.all(20),
-decoration: const BoxDecoration(
-gradient: LinearGradient(
-colors: [Color(0xFFFF9800), Color(0xFFFFB74D)],
-begin: Alignment.topLeft,
-end: Alignment.bottomRight,
-),
-borderRadius: BorderRadius.only(
-bottomLeft: Radius.circular(30),
-bottomRight: Radius.circular(30),
-),
-),
-child: Column(
-crossAxisAlignment: CrossAxisAlignment.start,
-children: [
-Row(
-mainAxisAlignment: MainAxisAlignment.spaceBetween,
-children: [
-Column(
-crossAxisAlignment: CrossAxisAlignment.start,
-children: [
-Text(
-'Welcome Back! 👨‍⚕️',
-style: TextStyle(
-color: Colors.white.withOpacity(0.9),
-fontSize: 16,
-),
-),
-const SizedBox(height: 4),
-const Text(
-'Dr. Indira Kattel',
-style: TextStyle(
-color: Colors.white,
-fontSize: 24,
-fontWeight: FontWeight.bold,
-),
-),
-],
-),
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, authState) {
+        final doctorName = authState is AuthSuccess ? authState.user.fullName : 'Doctor';
+        
+        return Scaffold(
+          backgroundColor: AppTheme.backgroundColor,
+          body: SafeArea(
+            child: CustomScrollView(
+              slivers: [
+                // App Bar
+                SliverToBoxAdapter(
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFFFF9800), Color(0xFFFFB74D)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(30),
+                        bottomRight: Radius.circular(30),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Welcome Back! 👨‍⚕️',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  doctorName,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
 Stack(
 children: [
 IconButton(
@@ -335,19 +357,20 @@ time: '10:00 AM',
 issue: 'Wheat crop disease diagnosis',
 status: 'upcoming',
 ),
-const SizedBox(height: 12),
+              const SizedBox(height: 12),
 
-const SizedBox(height: 12),
+              const SizedBox(height: 12),
 
-const SizedBox(height: 20),
-]),
-),
-),
-],
-),
-),
-);
-}
+              const SizedBox(height: 20),
+            ]),
+          ),
+        ),
+      ],
+    ),
+  ));
+      },
+    );
+  }
 }
 
 // Stat Card Widget
@@ -569,7 +592,7 @@ Widget build(BuildContext context) {
 return Scaffold(
 backgroundColor: AppTheme.backgroundColor,
 appBar: AppBar(
-title: const Text('Appointments'),
+title: const Text('Community'),
 backgroundColor: const Color(0xFFFF9800),
 foregroundColor: Colors.white,
 ),
@@ -609,104 +632,400 @@ Widget _buildAppointmentsList(String type) {
 return ListView(
 padding: const EdgeInsets.all(16),
 children: const [
-_AppointmentCard(
-farmerName: 'Ram Sharma',
-time: '10:00 AM',
-issue: 'Wheat crop disease diagnosis',
-status: 'upcoming',
-),
-SizedBox(height: 12),
-_AppointmentCard(
-farmerName: 'Sita Devi',
-time: '11:30 AM',
-issue: 'Soil fertility consultation',
-status: 'upcoming',
-),
+
 ],
 );
 }
 }
 
 // Chat Requests Screen
-class ChatRequestsScreen extends StatelessWidget {
-const ChatRequestsScreen({super.key});
+class ChatRequestsScreen extends StatefulWidget {
+  const ChatRequestsScreen({super.key});
 
-@override
-Widget build(BuildContext context) {
-return Scaffold(
-backgroundColor: AppTheme.backgroundColor,
-appBar: AppBar(
-title: const Text('Messages'),
-backgroundColor: const Color(0xFFFF9800),
-foregroundColor: Colors.white,
-),
-body: ListView(
-padding: const EdgeInsets.all(16),
-children: [
-_ChatRequestCard(
-farmerName: 'Krishna Kumar',
-message: 'I need help with tomato pest control...',
-time: '5 min ago',
-isNew: true,
-onTap: () {
-// TODO: Navigate to chat screen
-ScaffoldMessenger.of(context).showSnackBar(
-const SnackBar(
-content: Text('Opening chat with Krishna Kumar...'),
-duration: Duration(seconds: 1),
-),
-);
-},
-),
-const SizedBox(height: 12),
-_ChatRequestCard(
-farmerName: 'Gita Sharma',
-message: 'Can you guide me on organic fertilizers?',
-time: '15 min ago',
-isNew: true,
-onTap: () {
-ScaffoldMessenger.of(context).showSnackBar(
-const SnackBar(
-content: Text('Opening chat with Gita Sharma...'),
-duration: Duration(seconds: 1),
-),
-);
-},
-),
-const SizedBox(height: 12),
-_ChatRequestCard(
-farmerName: 'Ram Sharma',
-message: 'Thank you for the advice!',
-time: '2 hours ago',
-isNew: false,
-onTap: () {
-ScaffoldMessenger.of(context).showSnackBar(
-const SnackBar(
-content: Text('Opening chat with Ram Sharma...'),
-duration: Duration(seconds: 1),
-),
-);
-},
-),
-const SizedBox(height: 12),
-_ChatRequestCard(
-farmerName: 'Sita Devi',
-message: 'The crops are doing much better now',
-time: '1 day ago',
-isNew: false,
-onTap: () {
-ScaffoldMessenger.of(context).showSnackBar(
-const SnackBar(
-content: Text('Opening chat with Sita Devi...'),
-duration: Duration(seconds: 1),
-),
-);
-},
-),
-],
-),
-);
+  @override
+  State<ChatRequestsScreen> createState() => _ChatRequestsScreenState();
 }
+
+class _ChatRequestsScreenState extends State<ChatRequestsScreen> {
+  late ConsultationService _consultationService;
+  String _token = '';
+  bool _isLoading = false;
+  List<ConsultationRequest> _requests = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _consultationService = ConsultationService(client: http.Client());
+    
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthSuccess) {
+      _token = authState.token;
+      _loadRequests();
+    }
+  }
+
+  Future<void> _loadRequests() async {
+    setState(() => _isLoading = true);
+    try {
+      final requests = await _consultationService.getMyRequests(_token);
+      setState(() {
+        _requests = requests;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleApprove(ConsultationRequest request) async {
+    try {
+      await _consultationService.approveRequest(_token, request.id);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Consultation request approved!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadRequests();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleReject(ConsultationRequest request) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reject Request'),
+        content: Text('Are you sure you want to reject the consultation request from ${request.farmer?.fullName ?? "this farmer"}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Reject'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await _consultationService.rejectRequest(_token, request.id);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Consultation request rejected'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          _loadRequests();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      appBar: AppBar(
+        title: const Text(
+          'Consultation Requests',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: const Color(0xFFFF9800),
+        elevation: 0,
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _requests.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.inbox, size: 64, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No consultation requests',
+                        style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadRequests,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _requests.length,
+                    itemBuilder: (context, index) {
+                      final request = _requests[index];
+                      return _buildRequestCard(request);
+                    },
+                  ),
+                ),
+    );
+  }
+
+  Widget _buildRequestCard(ConsultationRequest request) {
+    final farmer = request.farmer;
+    if (farmer == null) return const SizedBox.shrink();
+
+    Color statusColor;
+    IconData statusIcon;
+    
+    switch (request.status) {
+      case 'approved':
+        statusColor = Colors.green;
+        statusIcon = Icons.check_circle;
+        break;
+      case 'rejected':
+        statusColor = Colors.red;
+        statusIcon = Icons.cancel;
+        break;
+      case 'completed':
+        statusColor = Colors.blue;
+        statusIcon = Icons.done_all;
+        break;
+      default:
+        statusColor = Colors.orange;
+        statusIcon = Icons.schedule;
+    }
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: request.status == 'pending'
+            ? BorderSide(color: const Color(0xFFFF9800).withOpacity(0.3), width: 1)
+            : BorderSide.none,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: const Color(0xFFFF9800).withOpacity(0.1),
+                  child: Text(
+                    farmer.fullName[0].toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFFF9800),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        farmer.fullName,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(statusIcon, size: 16, color: statusColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            request.status.toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: statusColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (request.message != null && request.message!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Message:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      request.message!,
+                      style: TextStyle(color: Colors.grey[700]),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(Icons.access_time, size: 14, color: Colors.grey[600]),
+                const SizedBox(width: 4),
+                Text(
+                  'Requested: ${_formatDate(request.createdAt)}',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+                if (farmer.phoneNumber != null) ...[
+                  const SizedBox(width: 16),
+                  Icon(Icons.phone, size: 14, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text(
+                    farmer.phoneNumber!,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ],
+            ),
+            if (request.status == 'pending') ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _handleReject(request),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      icon: const Icon(Icons.close),
+                      label: const Text('Reject'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _handleApprove(request),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      icon: const Icon(Icons.check, color: Colors.white),
+                      label: const Text(
+                        'Approve',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ] else if (request.status == 'approved' && request.chatRoomId != null) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ChatScreen(
+                          userName: farmer.fullName,
+                          userRole: 'farmer',
+                          chatRoomId: request.chatRoomId!,
+                        ),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF9800),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  icon: const Icon(Icons.chat, color: Colors.white),
+                  label: const Text(
+                    'Open Chat',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays == 0) {
+      return 'Today ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
+  }
 }
 
 // Chat Request Card Widget
@@ -826,60 +1145,139 @@ size: 20,
 }
 
 // Knowledge Base Screen
-class KnowledgeBaseScreen extends StatelessWidget {
+class KnowledgeBaseScreen extends StatefulWidget {
 const KnowledgeBaseScreen({super.key});
 
 @override
-Widget build(BuildContext context) {
-return Scaffold(
-backgroundColor: AppTheme.backgroundColor,
-appBar: AppBar(
-title: const Text('Knowledge Base'),
-backgroundColor: const Color(0xFFFF9800),
-foregroundColor: Colors.white,
-actions: [
-IconButton(
-onPressed: () {},
-icon: const Icon(Icons.search),
-),
-],
-),
-body: ListView(
-padding: const EdgeInsets.all(16),
-children: const [
-_ArticleCard(
-title: 'Best Practices for Organic Farming',
-author: 'Dr. Agricultural Expert',
-views: '1.2k',
-likes: '234',
-publishedDate: '2 days ago',
-),
-SizedBox(height: 12),
-_ArticleCard(
-title: 'How to Identify and Treat Common Crop Diseases',
-author: 'Dr. Agricultural Expert',
-views: '2.5k',
-likes: '456',
-publishedDate: '1 week ago',
-),
-],
-),
-);
+State<KnowledgeBaseScreen> createState() => _KnowledgeBaseScreenState();
 }
+
+class _KnowledgeBaseScreenState extends State<KnowledgeBaseScreen> {
+List<dynamic> _posts = [];
+bool _isLoading = true;
+
+@override
+void initState() {
+super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadPosts();
+    });
+  }
+
+  Future<void> _loadPosts() async {
+    setState(() => _isLoading = true);
+    try {
+      final authState = context.read<AuthBloc>().state;
+      if (authState is! AuthSuccess) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final response = await http.get(
+        Uri.parse('http://10.0.2.2:8000/api/posts/posts/'),
+        headers: {
+          'Authorization': 'Token ${authState.token}',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _posts = json.decode(response.body);
+          _isLoading = false;
+        });
+      } else {
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading posts: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      appBar: AppBar(
+        title: const Text('Community Posts'),
+        backgroundColor: const Color(0xFFFF9800),
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            onPressed: () {
+              // TODO: Add search functionality
+            },
+            icon: const Icon(Icons.search),
+          ),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(
+              color: Color(0xFFFF9800),
+            ))
+          : RefreshIndicator(
+              onRefresh: _loadPosts,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: _posts.length,
+                itemBuilder: (context, index) {
+                  final post = _posts[index];
+                  return _ArticleCard(
+                    title: post['title'] ?? '',
+                    author: post['author_name'] ?? 'Unknown',
+                    isVerifiedDoctor: post['author_is_doctor'] ?? false,
+                    content: post['content'] ?? '',
+                    likes: post['upvotes_count']?.toString() ?? '0',
+                    publishedDate: _formatDate(post['created_at']),
+                  );
+                },
+              ),
+            ),
+    );
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null) return '';
+    try {
+      final date = DateTime.parse(dateStr);
+      final now = DateTime.now();
+      final difference = now.difference(date);
+
+      if (difference.inDays == 0) {
+        return 'Today';
+      } else if (difference.inDays == 1) {
+        return 'Yesterday';
+      } else if (difference.inDays < 7) {
+        return '${difference.inDays} days ago';
+      } else if (difference.inDays < 30) {
+        return '${(difference.inDays / 7).floor()} weeks ago';
+      } else {
+        return '${(difference.inDays / 30).floor()} months ago';
+      }
+    } catch (e) {
+      return '';
+    }
+  }
 }
 
 // Article Card Widget
 class _ArticleCard extends StatelessWidget {
 final String title;
 final String author;
-final String views;
+final bool isVerifiedDoctor;
+final String content;
 final String likes;
 final String publishedDate;
 
 const _ArticleCard({
 required this.title,
 required this.author,
-required this.views,
+this.isVerifiedDoctor = false,
+required this.content,
 required this.likes,
 required this.publishedDate,
 });
@@ -887,6 +1285,7 @@ required this.publishedDate,
 @override
 Widget build(BuildContext context) {
 return Container(
+margin: const EdgeInsets.only(bottom: 12),
 padding: const EdgeInsets.all(16),
 decoration: BoxDecoration(
 color: Colors.white,
@@ -909,8 +1308,12 @@ fontSize: 16,
 fontWeight: FontWeight.bold,
 color: AppTheme.darkGreen,
 ),
+maxLines: 2,
+overflow: TextOverflow.ellipsis,
 ),
 const SizedBox(height: 8),
+Row(
+children: [
 Text(
 'By $author',
 style: TextStyle(
@@ -918,14 +1321,30 @@ fontSize: 12,
 color: Colors.grey[600],
 ),
 ),
+if (isVerifiedDoctor) ...[
+const SizedBox(width: 4),
+const Icon(
+Icons.verified,
+size: 16,
+color: Color(0xFF4CAF50),
+),
+],
+],
+),
+const SizedBox(height: 8),
+Text(
+content,
+style: TextStyle(
+fontSize: 14,
+color: Colors.grey[700],
+),
+maxLines: 3,
+overflow: TextOverflow.ellipsis,
+),
 const SizedBox(height: 12),
 Row(
 children: [
-Icon(Icons.visibility, size: 16, color: Colors.grey[600]),
-const SizedBox(width: 4),
-Text(views, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-const SizedBox(width: 16),
-Icon(Icons.thumb_up, size: 16, color: Colors.grey[600]),
+Icon(Icons.thumb_up_outlined, size: 16, color: Colors.grey[600]),
 const SizedBox(width: 4),
 Text(likes, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
 const Spacer(),
@@ -1217,6 +1636,7 @@ SizedBox(
 width: double.infinity,
 child: ElevatedButton.icon(
 onPressed: () {
+context.read<AuthBloc>().add(const LogoutRequested());
 Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
 },
 icon: const Icon(Icons.logout),

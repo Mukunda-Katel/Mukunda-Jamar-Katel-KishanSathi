@@ -56,6 +56,7 @@ class ChatRoom {
 class ChatMessage {
   final int id;
   final String content;
+  final String? image;
   final DateTime timestamp;
   final bool isRead;
   final ChatUser sender;
@@ -64,6 +65,7 @@ class ChatMessage {
   ChatMessage({
     required this.id,
     required this.content,
+    this.image,
     required this.timestamp,
     required this.isRead,
     required this.sender,
@@ -74,6 +76,7 @@ class ChatMessage {
     return ChatMessage(
       id: json['id'] as int? ?? 0,
       content: json['content'] as String? ?? '',
+      image: json['image_url'] as String?,
       timestamp: json['timestamp'] != null
           ? DateTime.parse(json['timestamp'] as String)
           : DateTime.now(),
@@ -94,6 +97,7 @@ class ChatMessage {
     return {
       'id': id,
       'content': content,
+      'image': image,
       'timestamp': timestamp.toIso8601String(),
       'is_read': isRead,
       'sender': sender.toJson(),
