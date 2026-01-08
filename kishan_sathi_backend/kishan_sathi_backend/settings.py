@@ -39,6 +39,8 @@ EXTERNAL_APPS = [
     'farmer',
     'buyer',
     'chat',
+    'posts',
+    'consultation',
 ]
 
 INSTALLED_APPS += EXTERNAL_APPS

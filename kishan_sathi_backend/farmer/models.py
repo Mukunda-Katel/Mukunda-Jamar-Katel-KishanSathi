@@ -19,8 +19,7 @@ class Category(models.Model):
 
 
 class Product(models.Model):
-    
-    
+
     UNIT_CHOICES = [
         ('kg', 'Kilogram'),
         ('g', 'Gram'),
@@ -32,14 +31,11 @@ class Product(models.Model):
         ('quintal', 'Quintal'),
         ('ton', 'Ton'),
     ]
-    
     STATUS_CHOICES = [
         ('available', 'Available'),
         ('sold_out', 'Sold Out'),
         ('pending', 'Pending'),
     ]
-    
-   
     farmer = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -55,7 +51,6 @@ class Product(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField()
     
-   
     price = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -67,17 +62,12 @@ class Product(models.Model):
         validators=[MinValueValidator(0)]
     )
     unit = models.CharField(max_length=20, choices=UNIT_CHOICES, default='kg')
-    
    
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available')
     is_organic = models.BooleanField(default=False)
     harvest_date = models.DateField(null=True, blank=True)
-    
-   
     location = models.CharField(max_length=200, help_text="Farm location or village")
     district = models.CharField(max_length=100, blank=True)
-    
-   
     image = models.ImageField(
         upload_to='products/',
         null=True,
@@ -85,7 +75,6 @@ class Product(models.Model):
         help_text="Primary product image"
     )
     
-   
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
