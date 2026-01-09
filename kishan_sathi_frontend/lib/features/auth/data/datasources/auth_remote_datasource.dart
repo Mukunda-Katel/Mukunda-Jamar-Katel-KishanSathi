@@ -13,23 +13,28 @@ class ApiService {
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,
-    required String role,
+    String? role,  // Make role optional
   }) async {
     try {
       final url = Uri.parse(AppConfig.getUrl(AppConfig.loginEndpoint));
       
+      // Build request body, only include role if provided
+      final Map<String, dynamic> requestBody = {
+        'email': email,
+        'password': password,
+      };
+      if (role != null) {
+        requestBody['role'] = role;
+      }
+      
       print('Login URL: $url');
-      print('Login Body: ${jsonEncode({'email': email, 'role': role})}');
+      print('Login Body: ${jsonEncode(requestBody)}');
       
       final response = await _client
           .post(
             url,
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'email': email,
-              'password': password,
-              'role': role,
-            }),
+            body: jsonEncode(requestBody),
           )
           .timeout(const Duration(seconds: 30));
 

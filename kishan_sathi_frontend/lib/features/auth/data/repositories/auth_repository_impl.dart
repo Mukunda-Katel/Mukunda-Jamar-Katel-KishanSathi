@@ -16,7 +16,7 @@ class AuthRepositoryImpl {
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,
-    required String role,
+    String? role,  // Make role optional
   }) async {
     final response = await _apiService.login(
       email: email,

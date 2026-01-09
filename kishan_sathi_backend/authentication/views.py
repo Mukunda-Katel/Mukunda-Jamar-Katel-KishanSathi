@@ -18,7 +18,7 @@ def login_view(request):
     if serializer.is_valid():
         email = serializer.validated_data['email']
         password = serializer.validated_data['password']
-        role = serializer.validated_data['role']
+        role = serializer.validated_data.get('role')  # Role is now optional
 
         user = authenticate(request, username=email, password=password)
 
@@ -28,8 +28,8 @@ def login_view(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Check if user's role matches
-        if user.role != role:
+        # If role is provided, check if it matches; otherwise, use user's role
+        if role and user.role != role:
             return Response(
                 {'non_field_errors': [f'User is not registered as {role}.']},
                 status=status.HTTP_400_BAD_REQUEST

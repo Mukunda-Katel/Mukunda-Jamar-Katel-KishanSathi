@@ -324,28 +324,6 @@ class _LoginFormState extends State<LoginForm> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _rememberMe = false;
-  String? _selectedRole;
-
-  final List<Map<String, dynamic>> _loginRoles = [
-    {
-      'value': 'buyer',
-      'label': 'Buyer',
-      'icon': Icons.shopping_cart,
-      'color': const Color(0xFF2196F3),
-    },
-    {
-      'value': 'farmer',
-      'label': 'Farmer',
-      'icon': Icons.eco,
-      'color': const Color(0xFF4CAF50),
-    },
-    {
-      'value': 'doctor',
-      'label': 'Consultant',
-      'icon': Icons.medical_services,
-      'color': const Color(0xFFFF9800),
-    },
-  ];
 
   @override
   void dispose() {
@@ -356,29 +334,10 @@ class _LoginFormState extends State<LoginForm> {
 
   void _handleLogin() {
     if (_formKey.currentState!.validate()) {
-      if (_selectedRole == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.warning, color: Colors.white),
-                SizedBox(width: 12),
-                Text('Please select your role'),
-              ],
-            ),
-            backgroundColor: AppTheme.errorRed,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
-        return;
-      }
-
       context.read<AuthBloc>().add(
         LoginRequested(
           email: _emailController.text,
           password: _passwordController.text,
-          role: _selectedRole!,
         ),
       );
     }
@@ -459,10 +418,6 @@ class _LoginFormState extends State<LoginForm> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
-              
-              // Role Selection
-              _buildRoleSelector(),
-              const SizedBox(height: 20),
               
               // Email Field
               TextFormField(
@@ -643,78 +598,6 @@ class _LoginFormState extends State<LoginForm> {
     );
   }
 
-  Widget _buildRoleSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            'Login as',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[700],
-            ),
-          ),
-        ),
-        Row(
-          children: _loginRoles.map((role) {
-            final isSelected = _selectedRole == role['value'];
-            return Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() => _selectedRole = role['value']);
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: isSelected ? role['color'] : AppTheme.backgroundColor,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected ? role['color'] : Colors.grey.shade300,
-                        width: isSelected ? 2 : 1,
-                      ),
-                      boxShadow: isSelected
-                          ? [
-                              BoxShadow(
-                                color: (role['color'] as Color).withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ]
-                          : [],
-                    ),
-                    child: Column(
-                      children: [
-                        Icon(
-                          role['icon'],
-                          color: isSelected ? Colors.white : role['color'],
-                          size: 24,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          role['label'],
-                          style: TextStyle(
-                            color: isSelected ? Colors.white : Colors.grey[800],
-                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
 }
 
 // Signup Form

@@ -11,12 +11,12 @@ abstract class AuthEvent extends Equatable {
 class LoginRequested extends AuthEvent {
   final String email;
   final String password;
-  final String role;
+  final String? role;  // Make role optional
 
   const LoginRequested({
     required this.email,
     required this.password,
-    required this.role,
+    this.role,  // No longer required
   });
 
   @override

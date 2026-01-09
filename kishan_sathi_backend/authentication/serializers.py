@@ -15,7 +15,9 @@ class LoginSerializer(serializers.Serializer):
             ('farmer', 'Farmer'),
             ('buyer', 'Buyer'),
             ('doctor', 'Doctor'),
-        ]
+        ],
+        required=False,  # Make role optional
+        allow_blank=True
     )
 
 
