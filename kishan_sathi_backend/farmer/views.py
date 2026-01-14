@@ -1,5 +1,5 @@
 from rest_framework import viewsets, status, filters
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
@@ -12,6 +12,7 @@ from .serializers import (
     ProductCreateUpdateSerializer,
     ProductImageSerializer
 )
+from .weather_service import WeatherService
 
 
 class IsFarmer(IsAuthenticated):
@@ -175,4 +176,51 @@ class ProductViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_current_weather(request):
+    """Get current weather for a location"""
+    location = request.query_params.get('location')
+    
+    if not location:
+        return Response(
+            {'error': 'Location parameter is required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    weather_data = WeatherService.get_current_weather(location)
+    
+    if 'error' in weather_data:
+        return Response(weather_data, status=status.HTTP_400_BAD_REQUEST)
+    
+    return Response(weather_data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_weather_forecast(request):
+    """Get weather forecast for a location"""
+    location = request.query_params.get('location')
+    days = request.query_params.get('days', 3)
+    
+    if not location:
+        return Response(
+            {'error': 'Location parameter is required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        days = int(days)
+        if days < 1 or days > 10:
+            days = 3
+    except ValueError:
+        days = 3
+    
+    weather_data = WeatherService.get_forecast(location, days)
+    
+    if 'error' in weather_data:
+        return Response(weather_data, status=status.HTTP_400_BAD_REQUEST)
+    
+    return Response(weather_data, status=status.HTTP_200_OK)
 
