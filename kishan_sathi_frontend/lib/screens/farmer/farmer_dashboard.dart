@@ -13,6 +13,7 @@ import '../../features/product/data/repositories/product_repository_impl.dart';
 import 'add_product_screen.dart';
 import 'chat_list_screen.dart';
 import 'consultation_screen.dart';
+import 'weather_widget.dart';
 import '../community/community_feed_screen.dart';
 
 class FarmerDashboard extends StatefulWidget {
@@ -247,73 +248,14 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 20),
-                        // Weather Card
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.white.withOpacity(0.3)),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.wb_sunny,
-                                    color: Colors.yellow[100],
-                                    size: 40,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  const Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '28°C',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Text(
-                                        'Partly Cloudy',
-                                        style: TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    'Kathmandu',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.9),
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Humidity: 65%',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.7),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
                       ],
                     ),
                   ),
+                ),
+
+                // Weather Widget
+                const SliverToBoxAdapter(
+                  child: WeatherWidget(location: 'Kathmandu'),
                 ),
 
                 // Quick Actions

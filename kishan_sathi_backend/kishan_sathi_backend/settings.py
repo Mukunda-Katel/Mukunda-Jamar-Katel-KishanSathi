@@ -222,5 +222,7 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='Kishan Sathi <noreply@kishansathi.com>')
 ADMIN_EMAIL = config('ADMIN_EMAIL', default='admin@kishansathi.com')
 
+# Weather API Configuration
+WEATHER_API_KEY = config('WEATHER_API_KEY', default='')
 
 

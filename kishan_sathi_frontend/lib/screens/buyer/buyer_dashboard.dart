@@ -12,8 +12,13 @@ import '../../features/chat/presentation/bloc/chat_bloc.dart';
 import '../../features/chat/presentation/bloc/chat_event.dart';
 import '../../features/chat/presentation/bloc/chat_state.dart';
 import '../../features/chat/data/repositories/chat_repository.dart';
+import '../../features/cart/presentation/bloc/cart_bloc.dart';
+import '../../features/cart/presentation/bloc/cart_event.dart';
+import '../../features/cart/presentation/bloc/cart_state.dart';
+import '../../features/cart/data/repositories/cart_repository.dart';
 import 'chat_list_screen.dart';
 import 'chat_screen.dart';
+import 'cart_screen.dart';
 import '../community/community_feed_screen.dart';
 
 class BuyerDashboard extends StatefulWidget {
@@ -37,8 +42,15 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => ProductBloc(productRepository: ProductRepository()),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) => ProductBloc(productRepository: ProductRepository()),
+        ),
+        BlocProvider(
+          create: (context) => CartBloc(cartRepository: CartRepository()),
+        ),
+      ],
       child: Scaffold(
         body: _screens[_selectedIndex],
         bottomNavigationBar: Container(
@@ -61,7 +73,6 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
                   _buildNavItem(Icons.home, 'Home', 0),
                   _buildNavItem(Icons.groups, 'Community', 1),
                   _buildNavItem(Icons.chat, 'Chat', 2),
-                  _buildNavItem(Icons.receipt_long, 'Orders', 3),
                   _buildNavItem(Icons.favorite, 'Favorites', 4),
                   _buildNavItem(Icons.person, 'Profile', 5),
                 ],
@@ -138,6 +149,12 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
     super.initState();
     // Load all products when screen initializes
     context.read<ProductBloc>().add(const LoadProducts(availableOnly: true));
+    
+    // Load cart
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthSuccess) {
+      context.read<CartBloc>().add(LoadCart(authState.token));
+    }
   }
 
   void _onCategorySelected(int? categoryId) {
@@ -153,13 +170,38 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            // App Bar
-            SliverToBoxAdapter(
+    return BlocListener<CartBloc, CartState>(
+      listener: (context, state) {
+        if (state is CartItemAdded) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          // Reload cart count
+          final authState = context.read<AuthBloc>().state;
+          if (authState is AuthSuccess) {
+            context.read<CartBloc>().add(GetCartCount(authState.token));
+          }
+        } else if (state is CartError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        body: SafeArea(
+          child: CustomScrollView(
+            slivers: [
+              // App Bar
+              SliverToBoxAdapter(
               child: Container(
                 padding: const EdgeInsets.all(20),
                 decoration: const BoxDecoration(
@@ -200,34 +242,103 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                             ),
                           ],
                         ),
-                        Stack(
+                        Row(
                           children: [
-                            IconButton(
-                              onPressed: () {},
-                              icon: const Icon(
-                                Icons.notifications_outlined,
-                                color: Colors.white,
-                                size: 28,
-                              ),
+                            // Cart Icon with Badge
+                            BlocBuilder<CartBloc, CartState>(
+                              builder: (context, cartState) {
+                                int cartCount = 0;
+                                if (cartState is CartLoaded) {
+                                  cartCount = cartState.cart.totalItems;
+                                }
+                                
+                                return Stack(
+                                  children: [
+                                    IconButton(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (newContext) => MultiBlocProvider(
+                                              providers: [
+                                                BlocProvider.value(
+                                                  value: context.read<CartBloc>(),
+                                                ),
+                                                BlocProvider.value(
+                                                  value: context.read<AuthBloc>(),
+                                                ),
+                                              ],
+                                              child: const CartScreen(),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(
+                                        Icons.shopping_cart_outlined,
+                                        color: Colors.white,
+                                        size: 28,
+                                      ),
+                                    ),
+                                    if (cartCount > 0)
+                                      Positioned(
+                                        right: 6,
+                                        top: 6,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: const BoxDecoration(
+                                            color: Colors.red,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          constraints: const BoxConstraints(
+                                            minWidth: 18,
+                                            minHeight: 18,
+                                          ),
+                                          child: Text(
+                                            cartCount.toString(),
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
                             ),
-                            Positioned(
-                              right: 8,
-                              top: 8,
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Text(
-                                  '2',
-                                  style: TextStyle(
+                            // Notification Icon
+                            Stack(
+                              children: [
+                                IconButton(
+                                  onPressed: () {},
+                                  icon: const Icon(
+                                    Icons.notifications_outlined,
                                     color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
+                                    size: 28,
                                   ),
                                 ),
-                              ),
+                                Positioned(
+                                  right: 8,
+                                  top: 8,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Text(
+                                      '2',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -286,9 +397,22 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                       height: 100,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
-                        itemCount: _categories.length,
+                        itemCount: _categories.length + 1, // +1 for "All" category
                         itemBuilder: (context, index) {
-                          final category = _categories[index];
+                          // First item is "All"
+                          if (index == 0) {
+                            return _CategoryCard(
+                              icon: Icons.grid_view,
+                              label: 'All',
+                              color: const Color(0xFF2196F3),
+                              isSelected: _selectedCategoryId == null,
+                              onTap: () {
+                                _onCategorySelected(null);
+                              },
+                            );
+                          }
+                          
+                          final category = _categories[index - 1];
                           final colors = [
                             const Color(0xFFFF9800),
                             const Color(0xFF4CAF50),
@@ -302,7 +426,8 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                           return _CategoryCard(
                             icon: category['icon'] as IconData,
                             label: category['name'] as String,
-                            color: colors[index % colors.length],
+                            color: colors[(index - 1) % colors.length],
+                            isSelected: _selectedCategoryId == category['id'],
                             onTap: () {
                               _onCategorySelected(category['id'] as int);
                             },
@@ -322,19 +447,24 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Featured Products',
-                      style: TextStyle(
+                    Text(
+                      _selectedCategoryId == null 
+                          ? 'All Products' 
+                          : '${_categories.firstWhere((c) => c['id'] == _selectedCategoryId, orElse: () => {'name': 'Featured'})['name']} Products',
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: AppTheme.darkGreen,
                       ),
                     ),
                     TextButton(
-                      onPressed: () {},
-                      child: const Text(
-                        'View All',
-                        style: TextStyle(
+                      onPressed: () {
+                        // Clear category filter and show all products
+                        _onCategorySelected(null);
+                      },
+                      child: Text(
+                        _selectedCategoryId == null ? 'Refresh' : 'View All',
+                        style: const TextStyle(
                           color: Color(0xFF2196F3),
                           fontWeight: FontWeight.w600,
                         ),
@@ -447,7 +577,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                     sliver: SliverGrid(
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
-                        childAspectRatio: 0.75,
+                        childAspectRatio: 0.68,
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 12,
                       ),
@@ -455,6 +585,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                         (context, index) {
                           final product = state.products[index];
                           return _ProductCard(
+                            productId: product.id,
                             name: product.name,
                             price: product.price.toString(),
                             unit: product.unit,
@@ -481,7 +612,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
           ],
         ),
       ),
-    );
+    ));
   }
 
   IconData _getProductIcon(String categoryName) {
@@ -504,12 +635,14 @@ class _CategoryCard extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
+  final bool isSelected;
   final VoidCallback onTap;
 
   const _CategoryCard({
     required this.icon,
     required this.label,
     required this.color,
+    this.isSelected = false,
     required this.onTap,
   });
 
@@ -521,11 +654,12 @@ class _CategoryCard extends StatelessWidget {
         width: 90,
         margin: const EdgeInsets.only(right: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isSelected ? color : Colors.white,
           borderRadius: BorderRadius.circular(16),
+          border: isSelected ? Border.all(color: color, width: 2) : null,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withOpacity(isSelected ? 0.1 : 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -537,10 +671,14 @@ class _CategoryCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: isSelected ? Colors.white.withOpacity(0.3) : color.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: color, size: 28),
+              child: Icon(
+                icon, 
+                color: isSelected ? Colors.white : color, 
+                size: 28,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
@@ -548,7 +686,7 @@ class _CategoryCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey[800],
+                color: isSelected ? Colors.white : Colors.grey[800],
               ),
             ),
           ],
@@ -560,6 +698,7 @@ class _CategoryCard extends StatelessWidget {
 
 // Product Card Widget
 class _ProductCard extends StatelessWidget {
+  final int productId;
   final String name;
   final String price;
   final String unit;
@@ -572,6 +711,7 @@ class _ProductCard extends StatelessWidget {
   final bool isOrganic;
 
   const _ProductCard({
+    required this.productId,
     required this.name,
     required this.price,
     required this.unit,
@@ -603,7 +743,7 @@ class _ProductCard extends StatelessWidget {
         children: [
           // Image placeholder or real image
           Expanded(
-            flex: 5,
+            flex: 4,
             child: Container(
               decoration: BoxDecoration(
                 gradient: imageUrl == null
@@ -689,7 +829,7 @@ class _ProductCard extends StatelessWidget {
           Expanded(
             flex: 6,
             child: Padding(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -697,14 +837,14 @@ class _ProductCard extends StatelessWidget {
                   Text(
                     name,
                     style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.bold,
                       color: AppTheme.darkGreen,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 2),
                   Row(
                     children: [
                       const Icon(Icons.star, size: 12, color: Colors.amber),
@@ -718,7 +858,7 @@ class _ProductCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 2),
                   Row(
                     children: [
                       Icon(Icons.person, size: 11, color: Colors.grey[600]),
@@ -737,7 +877,7 @@ class _ProductCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 2),
                   Row(
                     children: [
                       Icon(Icons.location_on, size: 11, color: Colors.grey[600]),
@@ -756,134 +896,169 @@ class _ProductCard extends StatelessWidget {
                     ],
                   ),
                   const Spacer(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                  // Price and Action Buttons
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Rs. $price',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF2196F3),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              'per $unit',
-                              style: TextStyle(
-                                fontSize: 9,
-                                color: Colors.grey[600],
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                      Text(
+                        'Rs. $price',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2196F3),
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      if (farmerId != null)
-                        GestureDetector(
-                          onTap: () async {
-                            // Get the auth token
-                            final authBloc = context.read<AuthBloc>();
-                            final authState = authBloc.state;
-                            
-                            if (authState is! AuthSuccess) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Please log in to chat'),
+                      Text(
+                        'per $unit',
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: Colors.grey[600],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          // Add to Cart Button
+                          GestureDetector(
+                            onTap: () {
+                              final authState = context.read<AuthBloc>().state;
+                              if (authState is! AuthSuccess) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Please log in to add to cart'),
+                                  ),
+                                );
+                                return;
+                              }
+                              
+                              context.read<CartBloc>().add(
+                                AddToCart(
+                                  token: authState.token,
+                                  productId: productId,
+                                  quantity: 1,
                                 ),
                               );
-                              return;
-                            }
-
-                          // Show loading indicator
-                          showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (context) => const Center(
-                              child: CircularProgressIndicator(),
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryGreen,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Icon(
+                                Icons.add_shopping_cart,
+                                size: 14,
+                                color: Colors.white,
+                              ),
                             ),
-                          );
+                          ),
+                          if (farmerId != null) ...[
+                            const SizedBox(width: 6),
+                            // Chat Button
+                            GestureDetector(
+                              onTap: () async {
+                                // Get the auth token
+                                final authBloc = context.read<AuthBloc>();
+                                final authState = authBloc.state;
+                                
+                                if (authState is! AuthSuccess) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Please log in to chat'),
+                                    ),
+                                  );
+                                  return;
+                                }
 
-                            try {
-                              // Create or get chat room with the farmer
-                              final chatBloc = ChatBloc(
-                                chatRepository: ChatRepository(),
-                                token: authState.token,
+                              // Show loading indicator
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (context) => const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
                               );
-                              
-                              // Listen for the ChatRoomCreated state
-                              final subscription = chatBloc.stream.listen((state) {
-                                if (state is ChatRoomCreated) {
-                                  // Close loading dialog
-                                  if (context.mounted) {
-                                    Navigator.pop(context);
-                                    
-                                    // Navigate to chat screen with actual room ID
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => BuyerChatScreen(
-                                          userName: farmer,
-                                          userRole: 'Farmer',
-                                          chatRoomId: state.chatRoom.id,
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                } else if (state is ChatError) {
-                                  // Close loading dialog and show error
+
+                                try {
+                                  // Create or get chat room with the farmer
+                                  final chatBloc = ChatBloc(
+                                    chatRepository: ChatRepository(),
+                                    token: authState.token,
+                                  );
+                                  
+                                  // Listen for the ChatRoomCreated state
+                                  final subscription = chatBloc.stream.listen((state) {
+                                    if (state is ChatRoomCreated) {
+                                      // Close loading dialog
+                                      if (context.mounted) {
+                                        Navigator.pop(context);
+                                        
+                                        // Navigate to chat screen with actual room ID
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => BuyerChatScreen(
+                                              userName: farmer,
+                                              userRole: 'Farmer',
+                                              chatRoomId: state.chatRoom.id,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    } else if (state is ChatError) {
+                                      // Close loading dialog and show error
+                                      if (context.mounted) {
+                                        Navigator.pop(context);
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Failed to create chat: ${state.message}'),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  });
+                                  
+                                  // Trigger the creation
+                                  chatBloc.add(CreateChatRoom(
+                                    participantIds: [farmerId!],
+                                  ));
+                                  
+                                  // Cancel subscription after 10 seconds to prevent memory leaks
+                                  Future.delayed(const Duration(seconds: 10), () {
+                                    subscription.cancel();
+                                  });
+                                } catch (e) {
                                   if (context.mounted) {
                                     Navigator.pop(context);
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: Text('Failed to create chat: ${state.message}'),
+                                        content: Text('Failed to create chat: $e'),
                                       ),
                                     );
                                   }
                                 }
-                              });
-                              
-                              // Trigger the creation
-                              chatBloc.add(CreateChatRoom(
-                                participantIds: [farmerId!],
-                              ));
-                              
-                              // Cancel subscription after 10 seconds to prevent memory leaks
-                              Future.delayed(const Duration(seconds: 10), () {
-                                subscription.cancel();
-                              });
-                            } catch (e) {
-                              if (context.mounted) {
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Failed to create chat: $e'),
-                                  ),
-                                );
-                              }
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF2196F3),
-                              borderRadius: BorderRadius.circular(8),
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2196F3),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Icon(
+                                  Icons.chat_bubble,
+                                  size: 14,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
-                            child: const Icon(
-                              Icons.chat_bubble,
-                              size: 16,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
+                          ],
+                        ],
+                      ),
                     ],
                   ),
                 ],
@@ -892,7 +1067,8 @@ class _ProductCard extends StatelessWidget {
           ),
         ],
       ),
-    );
+      );
+    
   }
 }
 
