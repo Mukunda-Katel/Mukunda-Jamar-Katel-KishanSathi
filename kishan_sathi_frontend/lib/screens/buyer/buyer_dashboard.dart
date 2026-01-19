@@ -16,10 +16,15 @@ import '../../features/cart/presentation/bloc/cart_bloc.dart';
 import '../../features/cart/presentation/bloc/cart_event.dart';
 import '../../features/cart/presentation/bloc/cart_state.dart';
 import '../../features/cart/data/repositories/cart_repository.dart';
+import '../../features/notification/presentation/bloc/notification_bloc.dart';
+import '../../features/notification/presentation/bloc/notification_event.dart';
+import '../../features/notification/presentation/bloc/notification_state.dart';
+import '../../features/notification/data/repositories/notification_repository.dart';
 import 'chat_list_screen.dart';
 import 'chat_screen.dart';
 import 'cart_screen.dart';
 import '../community/community_feed_screen.dart';
+import '../notification/notification_screen.dart';
 
 class BuyerDashboard extends StatefulWidget {
   const BuyerDashboard({super.key});
@@ -49,6 +54,10 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
         ),
         BlocProvider(
           create: (context) => CartBloc(cartRepository: CartRepository()),
+        ),
+        BlocProvider(
+          create: (context) => NotificationBloc(
+              notificationRepository: NotificationRepository()),
         ),
       ],
       child: Scaffold(
@@ -150,10 +159,11 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
     // Load all products when screen initializes
     context.read<ProductBloc>().add(const LoadProducts(availableOnly: true));
     
-    // Load cart
+    // Load cart and notifications
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthSuccess) {
       context.read<CartBloc>().add(LoadCart(authState.token));
+      context.read<NotificationBloc>().add(GetNotificationCount(authState.token));
     }
   }
 
@@ -309,36 +319,68 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                               },
                             ),
                             // Notification Icon
-                            Stack(
-                              children: [
-                                IconButton(
-                                  onPressed: () {},
-                                  icon: const Icon(
-                                    Icons.notifications_outlined,
-                                    color: Colors.white,
-                                    size: 28,
-                                  ),
-                                ),
-                                Positioned(
-                                  right: 8,
-                                  top: 8,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: const BoxDecoration(
-                                      color: Colors.red,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Text(
-                                      '2',
-                                      style: TextStyle(
+                            BlocBuilder<NotificationBloc, NotificationState>(
+                              builder: (context, notificationState) {
+                                int unreadCount = 0;
+                                if (notificationState is NotificationCountLoaded) {
+                                  unreadCount = notificationState.count.unreadCount;
+                                }
+                                
+                                return Stack(
+                                  children: [
+                                    IconButton(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (newContext) => MultiBlocProvider(
+                                              providers: [
+                                                BlocProvider.value(
+                                                  value: context.read<AuthBloc>(),
+                                                ),
+                                                BlocProvider.value(
+                                                  value: context.read<NotificationBloc>(),
+                                                ),
+                                              ],
+                                              child: const NotificationScreen(),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(
+                                        Icons.notifications_outlined,
                                         color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
+                                        size: 28,
                                       ),
                                     ),
-                                  ),
-                                ),
-                              ],
+                                    if (unreadCount > 0)
+                                      Positioned(
+                                        right: 8,
+                                        top: 8,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: const BoxDecoration(
+                                            color: Colors.red,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          constraints: const BoxConstraints(
+                                            minWidth: 18,
+                                            minHeight: 18,
+                                          ),
+                                          child: Text(
+                                            unreadCount > 99 ? '99+' : unreadCount.toString(),
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
                             ),
                           ],
                         ),

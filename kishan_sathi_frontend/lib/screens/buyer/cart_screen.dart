@@ -355,11 +355,36 @@ class _CartItemCard extends StatelessWidget {
                     ? Image.network(
                         item.product.image!,
                         fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                            ),
+                          );
+                        },
                         errorBuilder: (context, error, stackTrace) {
-                          return const Icon(Icons.shopping_basket, size: 40);
+                          return Container(
+                            color: Colors.grey[100],
+                            child: Icon(
+                              Icons.shopping_basket,
+                              size: 40,
+                              color: Colors.grey[400],
+                            ),
+                          );
                         },
                       )
-                    : const Icon(Icons.shopping_basket, size: 40),
+                    : Container(
+                        color: Colors.grey[100],
+                        child: Icon(
+                          Icons.shopping_basket,
+                          size: 40,
+                          color: Colors.grey[400],
+                        ),
+                      ),
               ),
             ),
             const SizedBox(width: 12),
@@ -382,7 +407,7 @@ class _CartItemCard extends StatelessWidget {
                   Text(
                     'Rs. ${item.product.price} per ${item.product.unit}',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       color: Colors.grey[600],
                     ),
                   ),
@@ -396,54 +421,59 @@ class _CartItemCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.remove, size: 18),
+                              icon: const Icon(Icons.remove, size: 16),
                               onPressed: () {
                                 if (item.quantity > 1) {
                                   onUpdateQuantity(item.quantity - 1);
                                 }
                               },
                               constraints: const BoxConstraints(
-                                minWidth: 32,
-                                minHeight: 32,
+                                minWidth: 28,
+                                minHeight: 28,
                               ),
                               padding: EdgeInsets.zero,
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
                               child: Text(
                                 item.quantity.toString(),
                                 style: const TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.add, size: 18),
+                              icon: const Icon(Icons.add, size: 16),
                               onPressed: () {
                                 if (item.quantity < item.product.quantity) {
                                   onUpdateQuantity(item.quantity + 1);
                                 }
                               },
                               constraints: const BoxConstraints(
-                                minWidth: 32,
-                                minHeight: 32,
+                                minWidth: 28,
+                                minHeight: 28,
                               ),
                               padding: EdgeInsets.zero,
                             ),
                           ],
                         ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 8),
                       // Subtotal
-                      Text(
-                        'Rs. ${item.subtotal.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2196F3),
+                      Flexible(
+                        child: Text(
+                          'Rs. ${item.subtotal.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2196F3),
+                          ),
+                          textAlign: TextAlign.right,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],

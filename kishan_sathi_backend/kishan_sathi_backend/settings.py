@@ -41,6 +41,7 @@ EXTERNAL_APPS = [
     'chat',
     'posts',
     'consultation',
+    'notifications',
 ]
 
 INSTALLED_APPS += EXTERNAL_APPS
