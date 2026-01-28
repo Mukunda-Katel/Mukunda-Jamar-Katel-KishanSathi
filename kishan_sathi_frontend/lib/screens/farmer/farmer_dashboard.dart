@@ -15,6 +15,8 @@ import 'chat_list_screen.dart';
 import 'consultation_screen.dart';
 import 'weather_widget.dart';
 import '../community/community_feed_screen.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import '../settings/language_settings_screen.dart';
 
 class FarmerDashboard extends StatefulWidget {
   const FarmerDashboard({super.key});
@@ -61,11 +63,13 @@ class _FarmerDashboardState extends State<FarmerDashboard> {
                 },
                 backgroundColor: AppTheme.primaryGreen,
                 icon: const Icon(Icons.add, color: Colors.white),
-                label: const Text(
-                  'Add Product',
-                  style: TextStyle(
+                label: Builder(
+                  builder: (context) => Text(
+                    AppLocalizations.of(context)!.addProduct,
+                    style: const TextStyle(
                     color: Colors.white,
-                    fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 elevation: 4,
@@ -85,16 +89,21 @@ class _FarmerDashboardState extends State<FarmerDashboard> {
           child: SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildNavItem(Icons.home, 'Home', 0),
-                  _buildNavItem(Icons.eco, 'My Crops', 1),
-                  _buildNavItem(Icons.groups, 'Community', 2),
-                  _buildNavItem(Icons.chat, 'Chat', 3),
-                  _buildNavItem(Icons.medical_services, 'Consult', 4),
-                  _buildNavItem(Icons.person, 'Profile', 5),
-                ],
+              child: Builder(
+                builder: (context) {
+                  final l10n = AppLocalizations.of(context)!;
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildNavItem(Icons.home, l10n.home, 0),
+                      _buildNavItem(Icons.eco, l10n.myCrops, 1),
+                      _buildNavItem(Icons.groups, l10n.community, 2),
+                      _buildNavItem(Icons.chat, l10n.chat, 3),
+                      _buildNavItem(Icons.medical_services, l10n.consult, 4),
+                      _buildNavItem(Icons.person, l10n.profile, 5),
+                    ],
+                  );
+                },
               ),
             ),
           ),
@@ -198,7 +207,7 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Welcome Back! 👋',
+                                  AppLocalizations.of(context)!.welcomeBack,
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.9),
                                     fontSize: 16,
@@ -265,9 +274,9 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Quick Actions',
-                          style: TextStyle(
+                        Text(
+                          AppLocalizations.of(context)!.quickActions,
+                          style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                             color: AppTheme.darkGreen,
@@ -279,7 +288,7 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                             Expanded(
                               child: _QuickActionCard(
                                 icon: Icons.add_circle_outline,
-                                label: 'Add Crop',
+                                label: AppLocalizations.of(context)!.addCrop,
                                 color: AppTheme.primaryGreen,
                                 onTap: () {},
                               ),
@@ -288,7 +297,7 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                             Expanded(
                               child: _QuickActionCard(
                                 icon: Icons.local_offer,
-                                label: 'Sell Product',
+                                label: AppLocalizations.of(context)!.sellProduct,
                                 color: const Color(0xFF2196F3),
                                 onTap: () {},
                               ),
@@ -301,7 +310,7 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                             Expanded(
                               child: _QuickActionCard(
                                 icon: Icons.chat_bubble_outline,
-                                label: 'Ask Expert',
+                                label: AppLocalizations.of(context)!.askExpert,
                                 color: const Color(0xFFFF9800),
                                 onTap: () {},
                               ),
@@ -310,7 +319,7 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                             Expanded(
                               child: _QuickActionCard(
                                 icon: Icons.trending_up,
-                                label: 'Market Trends',
+                                label: AppLocalizations.of(context)!.marketTrends,
                                 color: const Color(0xFF9C27B0),
                                 onTap: () {},
                               ),
@@ -329,9 +338,9 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'My Active Crops',
-                          style: TextStyle(
+                        Text(
+                          AppLocalizations.of(context)!.myActiveCrops,
+                          style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                             color: AppTheme.darkGreen,
@@ -339,9 +348,9 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                         ),
                         TextButton(
                           onPressed: () {},
-                          child: const Text(
-                            'View All',
-                            style: TextStyle(
+                          child: Text(
+                            AppLocalizations.of(context)!.viewAll,
+                            style: const TextStyle(
                               color: AppTheme.primaryGreen,
                               fontWeight: FontWeight.w600,
                             ),
@@ -370,7 +379,7 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                               const Icon(Icons.error_outline, size: 48, color: Colors.red),
                               const SizedBox(height: 16),
                               Text(
-                                'Failed to load products',
+                                AppLocalizations.of(context)!.failedToLoad,
                                 style: TextStyle(color: Colors.grey[700]),
                               ),
                               const SizedBox(height: 8),
@@ -381,7 +390,7 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                                     context.read<ProductBloc>().add(LoadMyProducts(authState.token));
                                   }
                                 },
-                                child: const Text('Retry'),
+                                child: Text(AppLocalizations.of(context)!.retry),
                               ),
                             ],
                           ),
@@ -399,7 +408,7 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                                 Icon(Icons.eco_outlined, size: 64, color: Colors.grey[400]),
                                 const SizedBox(height: 16),
                                 Text(
-                                  'No products yet',
+                                  AppLocalizations.of(context)!.noProductsYet,
                                   style: TextStyle(
                                     fontSize: 18,
                                     color: Colors.grey[600],
@@ -407,7 +416,7 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Start by adding your first product',
+                                  AppLocalizations.of(context)!.startByAdding,
                                   style: TextStyle(color: Colors.grey[500]),
                                 ),
                               ],
@@ -794,9 +803,9 @@ class _MyCropsScreenState extends State<MyCropsScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Marketplace',
-                      style: TextStyle(
+                    Text(
+                      AppLocalizations.of(context)!.marketplace,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -844,7 +853,7 @@ class _MyCropsScreenState extends State<MyCropsScreen> {
                       _StatCard(
                         icon: Icons.attach_money,
                         value: 'Rs. 45,000',
-                        label: 'Total Sales',
+                        label: AppLocalizations.of(context)!.totalSales,
                       ),
                       Container(
                         height: 50,
@@ -854,7 +863,7 @@ class _MyCropsScreenState extends State<MyCropsScreen> {
                       _StatCard(
                         icon: Icons.inventory_2,
                         value: '12',
-                        label: 'Products',
+                        label: AppLocalizations.of(context)!.products,
                       ),
                       Container(
                         height: 50,
@@ -864,7 +873,7 @@ class _MyCropsScreenState extends State<MyCropsScreen> {
                       _StatCard(
                         icon: Icons.shopping_bag,
                         value: '28',
-                        label: 'Orders',
+                        label: AppLocalizations.of(context)!.orders,
                       ),
                     ],
                   ),
@@ -879,9 +888,9 @@ class _MyCropsScreenState extends State<MyCropsScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'My Products',
-                      style: TextStyle(
+                    Text(
+                      AppLocalizations.of(context)!.myProducts,
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: AppTheme.darkGreen,
@@ -904,7 +913,7 @@ class _MyCropsScreenState extends State<MyCropsScreen> {
                         }
                       },
                       icon: const Icon(Icons.add, size: 18),
-                      label: const Text('Add Product'),
+                      label: Text(AppLocalizations.of(context)!.addProduct),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryGreen,
                         foregroundColor: Colors.white,
@@ -965,7 +974,7 @@ class _MyCropsScreenState extends State<MyCropsScreen> {
                               backgroundColor: AppTheme.primaryGreen,
                               foregroundColor: Colors.white,
                             ),
-                            child: const Text('Retry'),
+                            child: Text(AppLocalizations.of(context)!.retry),
                           ),
                         ],
                       ),
@@ -975,28 +984,28 @@ class _MyCropsScreenState extends State<MyCropsScreen> {
 
                 if (state is MyProductsLoaded) {
                   if (state.myProducts.isEmpty) {
-                    return const SliverFillRemaining(
+                    return SliverFillRemaining(
                       child: Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.inventory_2_outlined,
                               size: 60,
                               color: Colors.grey,
                             ),
-                            SizedBox(height: 16),
+                            const SizedBox(height: 16),
                             Text(
-                              'No products yet',
-                              style: TextStyle(
+                              AppLocalizations.of(context)!.noProductsYet,
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.grey,
                               ),
                             ),
-                            SizedBox(height: 8),
+                            const SizedBox(height: 8),
                             Text(
-                              'Add your first product to get started!',
+                              AppLocalizations.of(context)!.addYourFirstProduct,
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey,
@@ -1057,7 +1066,7 @@ class _MyCropsScreenState extends State<MyCropsScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.edit, color: AppTheme.primaryGreen),
-              title: const Text('Edit Product'),
+              title: Text(AppLocalizations.of(context)!.editProduct),
               onTap: () {
                 Navigator.pop(context);
                 // TODO: Navigate to edit screen
@@ -1065,7 +1074,7 @@ class _MyCropsScreenState extends State<MyCropsScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.visibility, color: Colors.blue),
-              title: const Text('View Details'),
+              title: Text(AppLocalizations.of(context)!.viewDetails),
               onTap: () {
                 Navigator.pop(context);
                 // TODO: Navigate to details screen
@@ -1073,7 +1082,7 @@ class _MyCropsScreenState extends State<MyCropsScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Delete Product'),
+              title: Text(AppLocalizations.of(context)!.deleteProduct),
               onTap: () {
                 Navigator.pop(context);
                 // TODO: Show delete confirmation
@@ -1372,11 +1381,11 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     child: Column(
                       children: [
-                        const Align(
+                        Align(
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            'Profile',
-                            style: TextStyle(
+                            AppLocalizations.of(context)!.profile,
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
@@ -1509,28 +1518,40 @@ class ProfileScreen extends StatelessWidget {
                         const SizedBox(height: 20),
                         _ProfileMenuItem(
                           icon: Icons.person_outline,
-                          title: 'Edit Profile',
+                          title: AppLocalizations.of(context)!.editProfile,
                           onTap: () {
                             // TODO: Navigate to edit profile
                           },
                         ),
+                        // _ProfileMenuItem(
+                        //   icon: Icons.notifications_outlined,
+                        //   title: AppLocalizations.of(context)!.notifications,
+                        //   onTap: () {
+                        //     // TODO: Navigate to notifications
+                        //   },
+                        // ),
                         _ProfileMenuItem(
-                          icon: Icons.notifications_outlined,
-                          title: 'Notifications',
+                          icon: Icons.language,
+                          title: AppLocalizations.of(context)!.language,
                           onTap: () {
-                            // TODO: Navigate to notifications
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const LanguageSettingsScreen(),
+                              ),
+                            );
                           },
                         ),
                         _ProfileMenuItem(
                           icon: Icons.settings_outlined,
-                          title: 'Settings',
+                          title: AppLocalizations.of(context)!.settings,
                           onTap: () {
                             // TODO: Navigate to settings
                           },
                         ),
                         _ProfileMenuItem(
                           icon: Icons.help_outline,
-                          title: 'Help & Support',
+                          title: AppLocalizations.of(context)!.helpSupport,
                           onTap: () {
                             // TODO: Navigate to help & support
                           },
@@ -1546,22 +1567,22 @@ class ProfileScreen extends StatelessWidget {
                               onPressed: () {
                                 showDialog(
                                   context: context,
-                                  builder: (context) => AlertDialog(
-                                    title: const Text('Logout'),
-                                    content: const Text('Are you sure you want to logout?'),
+                                  builder: (dialogContext) => AlertDialog(
+                                    title: Text(AppLocalizations.of(context)!.logout),
+                                    content: Text(AppLocalizations.of(context)!.logoutConfirmation),
                                     actions: [
                                       TextButton(
-                                        onPressed: () => Navigator.pop(context),
-                                        child: const Text('Cancel'),
+                                        onPressed: () => Navigator.pop(dialogContext),
+                                        child: Text(AppLocalizations.of(context)!.cancel),
                                       ),
                                       TextButton(
                                         onPressed: () {
-                                          Navigator.pop(context);
+                                          Navigator.pop(dialogContext);
                                           context.read<AuthBloc>().add(LogoutRequested());
                                         },
-                                        child: const Text(
-                                          'Logout',
-                                          style: TextStyle(color: Colors.red),
+                                        child: Text(
+                                          AppLocalizations.of(context)!.logout,
+                                          style: const TextStyle(color: Colors.red),
                                         ),
                                       ),
                                     ],
@@ -1569,8 +1590,8 @@ class ProfileScreen extends StatelessWidget {
                                 );
                               },
                               icon: const Icon(Icons.logout),
-                              label: const Text(
-                                'Logout',
+                              label: Text(
+                                AppLocalizations.of(context)!.logout,
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,

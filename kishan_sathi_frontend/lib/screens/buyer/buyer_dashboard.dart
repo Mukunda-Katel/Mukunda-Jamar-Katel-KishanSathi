@@ -25,6 +25,8 @@ import 'chat_screen.dart';
 import 'cart_screen.dart';
 import '../community/community_feed_screen.dart';
 import '../notification/notification_screen.dart';
+import '../settings/language_settings_screen.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class BuyerDashboard extends StatefulWidget {
   const BuyerDashboard({super.key});
@@ -76,15 +78,20 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
           child: SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildNavItem(Icons.home, 'Home', 0),
-                  _buildNavItem(Icons.groups, 'Community', 1),
-                  _buildNavItem(Icons.chat, 'Chat', 2),
-                  _buildNavItem(Icons.favorite, 'Favorites', 4),
-                  _buildNavItem(Icons.person, 'Profile', 5),
-                ],
+              child: Builder(
+                builder: (context) {
+                  final l10n = AppLocalizations.of(context)!;
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildNavItem(Icons.home, l10n.home, 0),
+                      _buildNavItem(Icons.groups, l10n.community, 1),
+                      _buildNavItem(Icons.chat, l10n.chat, 2),
+                      _buildNavItem(Icons.favorite, l10n.favorites, 4),
+                      _buildNavItem(Icons.person, l10n.profile, 5),
+                    ],
+                  );
+                },
               ),
             ),
           ),
@@ -140,6 +147,22 @@ class BuyerHomeScreen extends StatefulWidget {
 
 class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
   int? _selectedCategoryId;
+  
+  // Get localized category name
+  String _getCategoryName(BuildContext context, String englishName) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (englishName.toLowerCase()) {
+      case 'vegetables': return l10n.vegetables;
+      case 'fruits': return l10n.fruits;
+      case 'grains': return l10n.grains;
+      case 'dairy': return l10n.dairy;
+      case 'spices': return l10n.spices;
+      case 'pulses': return l10n.pulses;
+      case 'seeds': return l10n.seeds;
+      case 'organic': return l10n.organic;
+      default: return englishName;
+    }
+  }
   
   // Static categories data
   final List<Map<String, dynamic>> _categories = [
@@ -235,16 +258,16 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Hello Buyer! 👋',
+                              AppLocalizations.of(context)!.helloBuyer,
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.9),
                                 fontSize: 16,
                               ),
                             ),
                             const SizedBox(height: 4),
-                            const Text(
-                              'Find Fresh Produce',
-                              style: TextStyle(
+                            Text(
+                              AppLocalizations.of(context)!.findFreshProduce,
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -426,9 +449,9 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Categories',
-                      style: TextStyle(
+                    Text(
+                      AppLocalizations.of(context)!.categories,
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: AppTheme.darkGreen,
@@ -445,7 +468,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                           if (index == 0) {
                             return _CategoryCard(
                               icon: Icons.grid_view,
-                              label: 'All',
+                              label: AppLocalizations.of(context)!.all,
                               color: const Color(0xFF2196F3),
                               isSelected: _selectedCategoryId == null,
                               onTap: () {
@@ -467,7 +490,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                           ];
                           return _CategoryCard(
                             icon: category['icon'] as IconData,
-                            label: category['name'] as String,
+                            label: _getCategoryName(context, category['name'] as String),
                             color: colors[(index - 1) % colors.length],
                             isSelected: _selectedCategoryId == category['id'],
                             onTap: () {
@@ -489,15 +512,27 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      _selectedCategoryId == null 
-                          ? 'All Products' 
-                          : '${_categories.firstWhere((c) => c['id'] == _selectedCategoryId, orElse: () => {'name': 'Featured'})['name']} Products',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.darkGreen,
-                      ),
+                    Builder(
+                      builder: (context) {
+                        final l10n = AppLocalizations.of(context)!;
+                        final categoryName = _selectedCategoryId == null
+                            ? l10n.all
+                            : _getCategoryName(
+                                context,
+                                _categories.firstWhere(
+                                  (c) => c['id'] == _selectedCategoryId,
+                                  orElse: () => {'name': 'Featured'},
+                                )['name'] as String,
+                              );
+                        return Text(
+                          '$categoryName ${l10n.products}',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.darkGreen,
+                          ),
+                        );
+                      },
                     ),
                     TextButton(
                       onPressed: () {
@@ -505,7 +540,9 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                         _onCategorySelected(null);
                       },
                       child: Text(
-                        _selectedCategoryId == null ? 'Refresh' : 'View All',
+                        _selectedCategoryId == null
+                            ? AppLocalizations.of(context)!.refresh
+                            : AppLocalizations.of(context)!.viewAll,
                         style: const TextStyle(
                           color: Color(0xFF2196F3),
                           fontWeight: FontWeight.w600,
@@ -579,30 +616,30 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
 
                 if (state is ProductsLoaded) {
                   if (state.products.isEmpty) {
-                    return const SliverToBoxAdapter(
+                    return SliverToBoxAdapter(
                       child: Center(
                         child: Padding(
-                          padding: EdgeInsets.all(40),
+                          padding: const EdgeInsets.all(40),
                           child: Column(
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.shopping_basket_outlined,
                                 size: 60,
                                 color: Colors.grey,
                               ),
-                              SizedBox(height: 16),
+                              const SizedBox(height: 16),
                               Text(
-                                'No products available',
-                                style: TextStyle(
+                                AppLocalizations.of(context)!.noProductsAvailable,
+                                style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.grey,
                                 ),
                               ),
-                              SizedBox(height: 8),
+                              const SizedBox(height: 8),
                               Text(
-                                'Check back later for fresh produce!',
-                                style: TextStyle(
+                                AppLocalizations.of(context)!.checkBackLater,
+                                style: const TextStyle(
                                   fontSize: 14,
                                   color: Colors.grey,
                                 ),
@@ -1149,9 +1186,9 @@ class BuyerProfileScreen extends StatelessWidget {
                         bottomRight: Radius.circular(30),
                       ),
                     ),
-                    child: const Text(
-                      'Profile',
-                      style: TextStyle(
+                    child: Text(
+                      AppLocalizations.of(context)!.profile,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -1234,102 +1271,141 @@ class BuyerProfileScreen extends StatelessWidget {
                   Expanded(
                     child: Container(
                       color: Colors.white,
-                      child: Column(
-                        children: [
-                          _BuyerProfileMenuItem(
-                            icon: Icons.person_outline,
-                            iconColor: const Color(0xFF2196F3),
-                            title: 'Edit Profile',
-                            onTap: () {
-                              // TODO: Navigate to edit profile
-                            },
-                          ),
-                          _BuyerProfileMenuItem(
-                            icon: Icons.notifications_outlined,
-                            iconColor: const Color(0xFF2196F3),
-                            title: 'Notifications',
-                            onTap: () {
-                              // TODO: Navigate to notifications
-                            },
-                          ),
-                          _BuyerProfileMenuItem(
-                            icon: Icons.help_outline,
-                            iconColor: const Color(0xFF2196F3),
-                            title: 'Help & Support',
-                            onTap: () {
-                              // TODO: Navigate to help & support
-                            },
-                          ),
-                          _BuyerProfileMenuItem(
-                            icon: Icons.shield_outlined,
-                            iconColor: const Color(0xFF2196F3),
-                            title: 'Privacy Policy',
-                            onTap: () {
-                              // TODO: Navigate to privacy policy
-                            },
-                          ),
-                          _BuyerProfileMenuItem(
-                            icon: Icons.info_outline,
-                            iconColor: const Color(0xFF2196F3),
-                            title: 'About',
-                            onTap: () {
-                              // TODO: Navigate to about
-                            },
-                          ),
-                          const Spacer(),
-                          // Logout Button
-                          Padding(
-                            padding: const EdgeInsets.all(20),
-                            child: SizedBox(
-                              width: double.infinity,
-                              height: 56,
-                              child: ElevatedButton.icon(
-                                onPressed: () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) => AlertDialog(
-                                      title: const Text('Logout'),
-                                      content: const Text('Are you sure you want to logout?'),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(context),
-                                          child: const Text('Cancel'),
-                                        ),
-                                        TextButton(
-                                          onPressed: () {
-                                            Navigator.pop(context);
-                                            context.read<AuthBloc>().add(LogoutRequested());
-                                          },
-                                          child: const Text(
-                                            'Logout',
-                                            style: TextStyle(color: Colors.red),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                                icon: const Icon(Icons.logout),
-                                label: const Text(
-                                  'Logout',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFE53935),
-                                  foregroundColor: Colors.white,
-                                  elevation: 2,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                      child: Builder(
+                        builder: (context) {
+                          final l10n = AppLocalizations.of(context)!;
+                          return Column(
+                            children: [
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  child: Column(
+                                    children: [
+                                      _BuyerProfileMenuItem(
+                                        icon: Icons.person_outline,
+                                        iconColor: const Color(0xFF2196F3),
+                                        title: l10n.editProfile,
+                                        onTap: () {
+                                          // TODO: Navigate to edit profile
+                                        },
+                                      ),
+                                      _BuyerProfileMenuItem(
+                                        icon: Icons.notifications_outlined,
+                                        iconColor: const Color(0xFF2196F3),
+                                        title: l10n.notifications,
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (newContext) => MultiBlocProvider(
+                                                providers: [
+                                                  BlocProvider.value(
+                                                    value: context.read<AuthBloc>(),
+                                                  ),
+                                                  BlocProvider.value(
+                                                    value: context.read<NotificationBloc>(),
+                                                  ),
+                                                ],
+                                                child: const NotificationScreen(),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      _BuyerProfileMenuItem(
+                                        icon: Icons.language,
+                                        iconColor: const Color(0xFF2196F3),
+                                        title: l10n.language,
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => const LanguageSettingsScreen(),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      _BuyerProfileMenuItem(
+                                        icon: Icons.help_outline,
+                                        iconColor: const Color(0xFF2196F3),
+                                        title: l10n.helpSupport,
+                                        onTap: () {
+                                          // TODO: Navigate to help & support
+                                        },
+                                      ),
+                                      _BuyerProfileMenuItem(
+                                        icon: Icons.shield_outlined,
+                                        iconColor: const Color(0xFF2196F3),
+                                        title: l10n.privacyPolicy,
+                                        onTap: () {
+                                          // TODO: Navigate to privacy policy
+                                        },
+                                      ),
+                                      _BuyerProfileMenuItem(
+                                        icon: Icons.info_outline,
+                                        iconColor: const Color(0xFF2196F3),
+                                        title: l10n.about,
+                                        onTap: () {
+                                          // TODO: Navigate to about
+                                        },
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                        ],
+                              // Logout Button
+                              Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  height: 56,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (dialogContext) => AlertDialog(
+                                          title: Text(l10n.logout),
+                                          content: Text(l10n.logoutConfirmation),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(dialogContext),
+                                              child: Text(l10n.cancel),
+                                            ),
+                                            TextButton(
+                                              onPressed: () {
+                                                Navigator.pop(dialogContext);
+                                                context.read<AuthBloc>().add(LogoutRequested());
+                                              },
+                                              child: Text(
+                                                l10n.logout,
+                                                style: const TextStyle(color: Colors.red),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.logout),
+                                    label: Text(
+                                      l10n.logout,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFE53935),
+                                      foregroundColor: Colors.white,
+                                      elevation: 2,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ),
                   ),
