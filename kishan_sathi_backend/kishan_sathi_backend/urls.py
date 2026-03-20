@@ -12,6 +12,8 @@ urlpatterns = [
     path('api/consultation/', include('consultation.urls')),
     path('api/', include('posts.urls')),
     path('api/', include('notifications.urls')),
+    path('api/ai/', include('ai_chatbot.urls')),
+    path('api/admin/', include('admin_panel.urls')),
 ]
 
 # Serve media files in development

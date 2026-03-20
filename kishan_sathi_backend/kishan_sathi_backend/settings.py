@@ -42,6 +42,8 @@ EXTERNAL_APPS = [
     'posts',
     'consultation',
     'notifications',
+    'ai_chatbot',
+    'admin_panel',
 ]
 
 INSTALLED_APPS += EXTERNAL_APPS
@@ -225,5 +227,13 @@ ADMIN_EMAIL = config('ADMIN_EMAIL', default='admin@kishansathi.com')
 
 # Weather API Configuration
 WEATHER_API_KEY = config('WEATHER_API_KEY', default='')
+
+# Firebase Cloud Messaging Configuration (V1 API)
+# Download service account JSON from Firebase Console > Project Settings > Service Accounts
+# Place it in your project directory and specify the path here
+FIREBASE_SERVICE_ACCOUNT_KEY = config(
+    'FIREBASE_SERVICE_ACCOUNT_KEY',
+    default=str(BASE_DIR / 'firebase-service-account.json')
+)
 
 
