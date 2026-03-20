@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:kishan_sathi_frontend/screens/buyer/esewa.dart';
 import '../../core/theme/app_theme.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/bloc/auth_state.dart';
@@ -30,6 +31,10 @@ class _CartScreenState extends State<CartScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 600;
+    final horizontalPadding = isSmallScreen ? 12.0 : 16.0;
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
@@ -76,6 +81,17 @@ class _CartScreenState extends State<CartScreen> {
                 backgroundColor: Colors.green,
               ),
             );
+          } else if (state is PurchaseCompleted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.green,
+              ),
+            );
+
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
           } else if (state is CartError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -105,7 +121,7 @@ class _CartScreenState extends State<CartScreen> {
                     Text(
                       'Your cart is empty',
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: isSmallScreen ? 18 : 20,
                         fontWeight: FontWeight.bold,
                         color: Colors.grey[600],
                       ),
@@ -114,7 +130,7 @@ class _CartScreenState extends State<CartScreen> {
                     Text(
                       'Add products to get started',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: isSmallScreen ? 13 : 14,
                         color: Colors.grey[500],
                       ),
                     ),
@@ -123,8 +139,8 @@ class _CartScreenState extends State<CartScreen> {
                       onPressed: () => Navigator.pop(context),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2196F3),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 24 : 32,
                           vertical: 12,
                         ),
                       ),
@@ -143,7 +159,7 @@ class _CartScreenState extends State<CartScreen> {
                 // Cart Items List
                 Expanded(
                   child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(horizontalPadding),
                     itemCount: state.cart.items.length,
                     itemBuilder: (context, index) {
                       final item = state.cart.items[index];
@@ -179,7 +195,7 @@ class _CartScreenState extends State<CartScreen> {
 
                 // Cart Summary
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(horizontalPadding),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     boxShadow: [
@@ -200,14 +216,14 @@ class _CartScreenState extends State<CartScreen> {
                             Text(
                               'Total Items:',
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: isSmallScreen ? 15 : 16,
                                 color: Colors.grey[700],
                               ),
                             ),
                             Text(
                               '${state.cart.totalItems}',
-                              style: const TextStyle(
-                                fontSize: 16,
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 15 : 16,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -226,8 +242,8 @@ class _CartScreenState extends State<CartScreen> {
                             ),
                             Text(
                               'Rs. ${state.cart.totalPrice.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontSize: 20,
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 18 : 20,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF2196F3),
                               ),
@@ -239,12 +255,26 @@ class _CartScreenState extends State<CartScreen> {
                           width: double.infinity,
                           child: ElevatedButton(
                             onPressed: () {
-                              // TODO: Implement checkout
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Checkout coming soon!'),
-                                ),
+                              // Generate unique product ID for this transaction
+                              final String productId = 'KS${DateTime.now().millisecondsSinceEpoch}';
+                              
+                              Esewa esewa = Esewa(
+                                context: context,
+                                productId: productId,
+                                productName: 'Kishan Sathi Order',
+                                totalAmount: state.cart.totalPrice.toStringAsFixed(0),
+                                onSuccess: () {
+                                  // Complete purchase: reduce product quantities and clear cart
+                                  final authState = context.read<AuthBloc>().state;
+                                  if (authState is AuthSuccess) {
+                                    context.read<CartBloc>().add(CompletePurchase(authState.token));
+                                  }
+                                },
+                                onFailure: () {
+                                  // Handle failure if needed
+                                },
                               );
+                              esewa.pay();
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF2196F3),
@@ -332,19 +362,22 @@ class _CartItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 600;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
         child: Row(
           children: [
             // Product Image
             Container(
-              width: 80,
-              height: 80,
+              width: isSmallScreen ? 68 : 80,
+              height: isSmallScreen ? 68 : 80,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
                 color: Colors.grey[200],
@@ -396,8 +429,8 @@ class _CartItemCard extends StatelessWidget {
                 children: [
                   Text(
                     item.product.name,
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 14 : 16,
                       fontWeight: FontWeight.bold,
                     ),
                     maxLines: 2,
@@ -407,7 +440,7 @@ class _CartItemCard extends StatelessWidget {
                   Text(
                     'Rs. ${item.product.price} per ${item.product.unit}',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: isSmallScreen ? 11 : 12,
                       color: Colors.grey[600],
                     ),
                   ),
@@ -440,8 +473,8 @@ class _CartItemCard extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(horizontal: 8),
                               child: Text(
                                 item.quantity.toString(),
-                                style: const TextStyle(
-                                  fontSize: 13,
+                                style: TextStyle(
+                                  fontSize: isSmallScreen ? 12 : 13,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -467,8 +500,8 @@ class _CartItemCard extends StatelessWidget {
                       Flexible(
                         child: Text(
                           'Rs. ${item.subtotal.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: 14,
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 13 : 14,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF2196F3),
                           ),
