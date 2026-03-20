@@ -13,6 +13,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     on<RemoveFromCart>(_onRemoveFromCart);
     on<ClearCart>(_onClearCart);
     on<GetCartCount>(_onGetCartCount);
+    on<CompletePurchase>(_onCompletePurchase);
   }
 
   Future<void> _onLoadCart(
@@ -106,6 +107,24 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     try {
       final cartCount = await cartRepository.getCartCount(event.token);
       emit(CartCountLoaded(cartCount));
+    } catch (e) {
+      emit(CartError(e.toString().replaceAll('Exception: ', '')));
+    }
+  }
+
+  Future<void> _onCompletePurchase(
+    CompletePurchase event,
+    Emitter<CartState> emit,
+  ) async {
+    try {
+      final result = await cartRepository.completePurchase(event.token);
+      emit(PurchaseCompleted(result['message'] ?? 'Purchase completed successfully'));
+
+      final cartCount = await cartRepository.getCartCount(event.token);
+      emit(CartCountLoaded(cartCount));
+
+      final cart = await cartRepository.getCart(event.token);
+      emit(CartLoaded(cart));
     } catch (e) {
       emit(CartError(e.toString().replaceAll('Exception: ', '')));
     }

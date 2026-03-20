@@ -63,6 +63,14 @@ class CartRepository {
     }
   }
 
+  Future<Map<String, dynamic>> completePurchase(String token) async {
+    try {
+      return await _cartService.completePurchase(token);
+    } catch (e) {
+      throw Exception('Failed to complete purchase: $e');
+    }
+  }
+
   Future<CartCount> getCartCount(String token) async {
     try {
       return await _cartService.getCartCount(token);

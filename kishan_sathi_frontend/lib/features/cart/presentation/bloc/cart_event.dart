@@ -76,3 +76,12 @@ class GetCartCount extends CartEvent {
   @override
   List<Object> get props => [token];
 }
+
+class CompletePurchase extends CartEvent {
+  final String token;
+
+  const CompletePurchase(this.token);
+
+  @override
+  List<Object> get props => [token];
+}

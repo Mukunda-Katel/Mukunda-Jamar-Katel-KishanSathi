@@ -102,6 +102,23 @@ class CartService {
     }
   }
 
+  Future<Map<String, dynamic>> completePurchase(String token) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/complete_purchase/'),
+      headers: {
+        'Authorization': 'Token $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      final error = json.decode(response.body);
+      throw Exception(error['error'] ?? 'Failed to complete purchase');
+    }
+  }
+
   Future<CartCount> getCartCount(String token) async {
     final response = await http.get(
       Uri.parse('$baseUrl/count/'),

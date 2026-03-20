@@ -59,6 +59,15 @@ class CartCountLoaded extends CartState {
   List<Object> get props => [cartCount];
 }
 
+class PurchaseCompleted extends CartState {
+  final String message;
+
+  const PurchaseCompleted(this.message);
+
+  @override
+  List<Object> get props => [message];
+}
+
 class CartError extends CartState {
   final String message;
 
