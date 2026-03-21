@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:kishan_sathi_frontend/screens/buyer/esewa.dart';
+import '../../features/cart/data/models/cart_model.dart';
+import '../../features/payment/data/datasources/khalti_remote_data_source.dart';
 import '../../core/theme/app_theme.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/bloc/auth_state.dart';
 import '../../features/cart/presentation/bloc/cart_bloc.dart';
 import '../../features/cart/presentation/bloc/cart_event.dart';
 import '../../features/cart/presentation/bloc/cart_state.dart';
+import '../../services/khalti_payment_service.dart';
+
+enum _PaymentMethod { esewa, khalti }
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -16,6 +21,8 @@ class CartScreen extends StatefulWidget {
 }
 
 class _CartScreenState extends State<CartScreen> {
+  bool _isProcessingCheckout = false;
+
   @override
   void initState() {
     super.initState();
@@ -27,6 +34,234 @@ class _CartScreenState extends State<CartScreen> {
     if (authState is AuthSuccess) {
       context.read<CartBloc>().add(LoadCart(authState.token));
     }
+  }
+
+  Future<void> _checkoutWithEsewa({
+    required String token,
+    required Cart cart,
+  }) async {
+    final String productId = 'KS${DateTime.now().millisecondsSinceEpoch}';
+
+    final esewa = Esewa(
+      context: context,
+      productId: productId,
+      productName: 'Kishan Sathi Order',
+      totalAmount: cart.totalPrice.toStringAsFixed(0),
+      onSuccess: () {
+        context.read<CartBloc>().add(CompletePurchase(token));
+      },
+      onFailure: () {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('eSewa payment failed or cancelled.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      },
+    );
+
+    esewa.pay();
+  }
+
+  Map<String, dynamic>? _toJsonMap(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return value.map((key, val) => MapEntry('$key', val));
+    return null;
+  }
+
+  String _extractTransactionId(dynamic paymentResult) {
+    final map = _toJsonMap(paymentResult);
+    if (map == null) return '';
+    return (map['transaction_id'] ?? map['transactionId'] ?? map['idx'] ?? map['tid'] ?? '')
+        .toString();
+  }
+
+  Future<void> _checkoutWithKhalti({
+    required String token,
+    required Cart cart,
+  }) async {
+    if (_isProcessingCheckout) return;
+
+    setState(() {
+      _isProcessingCheckout = true;
+    });
+
+    try {
+      final remoteDataSource = KhaltiRemoteDataSource();
+
+      final status = await remoteDataSource.checkBusinessKhaltiStatus(
+        token: token,
+        relationshipId: cart.id,
+      );
+
+      final hasKhalti = status['has_khalti'] == true;
+      final isActive = status['is_active'] == true;
+
+      if (!hasKhalti || !isActive) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Seller has not linked an active Khalti account.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      final initiate = await remoteDataSource.initiateKhaltiPayment(
+        token: token,
+        relationshipId: cart.id,
+        amount: cart.totalPrice,
+        description: 'Kishan Sathi Order',
+      );
+
+      final pidx = (initiate['pidx'] ?? '').toString();
+      final paymentRecordId = initiate['payment_record_id'] as int?;
+      final publicKey = (initiate['public_key'] ?? '').toString();
+      final isTestEnvironment = initiate['is_test_environment'] == true;
+
+      if (pidx.isEmpty || paymentRecordId == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not start Khalti payment. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      if (!mounted) return;
+      final khaltiService = KhaltiPaymentService();
+
+      await khaltiService.initiatePayment(
+        context: context,
+        pidx: pidx,
+        isTestEnvironment: isTestEnvironment,
+        publicKey: publicKey.isEmpty ? null : publicKey,
+        onPaymentResult: (paymentResult) async {
+          try {
+            final verifyResponse = await remoteDataSource.verifyKhaltiPayment(
+              token: token,
+              paymentRecordId: paymentRecordId,
+              pidx: pidx,
+              transactionId: _extractTransactionId(paymentResult),
+              totalAmount: cart.totalPrice.toStringAsFixed(2),
+              status: 'completed',
+              khaltiResponse: _toJsonMap(paymentResult),
+            );
+
+            if (!mounted) return;
+            if (verifyResponse['status'] == 200) {
+              context.read<CartBloc>().add(CompletePurchase(token));
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    (verifyResponse['message'] ?? 'Khalti verification failed').toString(),
+                  ),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          } catch (e) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Khalti verify error: $e'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+        onMessage: (message, {needsPaymentConfirmation = false, khalti}) {
+          if (!mounted) return;
+          final lowered = message.toLowerCase();
+          if (lowered.contains('fail') || lowered.contains('cancel')) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Khalti checkout failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessingCheckout = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _showPaymentMethodSheet({
+    required String token,
+    required Cart cart,
+  }) async {
+    if (_isProcessingCheckout) return;
+
+    final method = await showModalBottomSheet<_PaymentMethod>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Choose Payment Method',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Select your preferred checkout provider.',
+                  style: TextStyle(color: Colors.black54),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  leading: const Icon(Icons.account_balance_wallet_outlined),
+                  title: const Text('eSewa'),
+                  subtitle: const Text('Pay using eSewa wallet'),
+                  onTap: () => Navigator.pop(sheetContext, _PaymentMethod.esewa),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.payments_outlined),
+                  title: const Text('Khalti'),
+                  subtitle: const Text('Pay using Khalti checkout'),
+                  onTap: () => Navigator.pop(sheetContext, _PaymentMethod.khalti),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (method == null) return;
+
+    if (method == _PaymentMethod.esewa) {
+      await _checkoutWithEsewa(token: token, cart: cart);
+      return;
+    }
+
+    await _checkoutWithKhalti(token: token, cart: cart);
   }
 
   @override
@@ -254,28 +489,25 @@ class _CartScreenState extends State<CartScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: () {
-                              // Generate unique product ID for this transaction
-                              final String productId = 'KS${DateTime.now().millisecondsSinceEpoch}';
-                              
-                              Esewa esewa = Esewa(
-                                context: context,
-                                productId: productId,
-                                productName: 'Kishan Sathi Order',
-                                totalAmount: state.cart.totalPrice.toStringAsFixed(0),
-                                onSuccess: () {
-                                  // Complete purchase: reduce product quantities and clear cart
-                                  final authState = context.read<AuthBloc>().state;
-                                  if (authState is AuthSuccess) {
-                                    context.read<CartBloc>().add(CompletePurchase(authState.token));
-                                  }
-                                },
-                                onFailure: () {
-                                  // Handle failure if needed
-                                },
-                              );
-                              esewa.pay();
-                            },
+                            onPressed: _isProcessingCheckout
+                                ? null
+                                : () {
+                                    final authState = context.read<AuthBloc>().state;
+                                    if (authState is! AuthSuccess) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Please login again to continue checkout.'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    _showPaymentMethodSheet(
+                                      token: authState.token,
+                                      cart: state.cart,
+                                    );
+                                  },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF2196F3),
                               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -283,14 +515,23 @@ class _CartScreenState extends State<CartScreen> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: const Text(
-                              'Proceed to Checkout',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                            child: _isProcessingCheckout
+                                ? const SizedBox(
+                                    height: 22,
+                                    width: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  )
+                                : const Text(
+                                    'Proceed to Checkout',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                           ),
                         ),
                       ],
