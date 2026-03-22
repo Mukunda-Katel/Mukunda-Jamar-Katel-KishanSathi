@@ -17,6 +17,9 @@ import 'weather_widget.dart';
 import '../community/community_feed_screen.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../settings/language_settings_screen.dart';
+import 'ai_chatbot_screen.dart';
+import '../../features/chatbot/presentation/bloc/chatbot_bloc.dart';
+import '../../features/chatbot/data/services/chatbot_service.dart';
 
 class FarmerDashboard extends StatefulWidget {
   const FarmerDashboard({super.key});
@@ -30,7 +33,6 @@ class _FarmerDashboardState extends State<FarmerDashboard> {
 
   final List<Widget> _screens = [
     const FarmerHomeScreen(),
-    const MyCropsScreen(),
     const CommunityFeedScreen(),
     const ChatListScreen(),
     const FarmerConsultationScreen(),
@@ -39,11 +41,26 @@ class _FarmerDashboardState extends State<FarmerDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    final textScaleFactor = mediaQuery.textScaleFactor.clamp(0.9, 1.2);
+
+    final isTinyScreen = screenWidth < 360;
+    final isCompactNav = screenWidth < 420;
+    final isTablet = screenWidth >= 768;
+
+    final navHorizontalPadding = isTablet ? 20.0 : (isTinyScreen ? 4.0 : 8.0);
+    final navVerticalPadding = isTablet ? 10.0 : 8.0;
+    final navHeight = isTablet ? 86.0 : (isTinyScreen ? 68.0 : 74.0);
+    final iconSize = isTablet ? 26.0 : (isTinyScreen ? 18.0 : (isCompactNav ? 20.0 : 24.0));
+    final labelFontSize = (isTablet ? 12.0 : (isTinyScreen ? 8.0 : (isCompactNav ? 9.0 : 11.0))) /
+        textScaleFactor;
+
     return BlocProvider(
       create: (context) => ProductBloc(productRepository: ProductRepository()),
       child: Scaffold(
         body: _screens[_selectedIndex],
-        floatingActionButton: _selectedIndex == 0 || _selectedIndex == 1
+        floatingActionButton: _selectedIndex == 0
             ? FloatingActionButton.extended(
                 onPressed: () async {
                   final result = await Navigator.push(
@@ -76,6 +93,7 @@ class _FarmerDashboardState extends State<FarmerDashboard> {
               )
             : null,
         bottomNavigationBar: Container(
+          height: navHeight,
           decoration: BoxDecoration(
             color: Colors.white,
             boxShadow: [
@@ -88,19 +106,66 @@ class _FarmerDashboardState extends State<FarmerDashboard> {
           ),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              padding: EdgeInsets.symmetric(
+                horizontal: navHorizontalPadding,
+                vertical: navVerticalPadding,
+              ),
               child: Builder(
                 builder: (context) {
                   final l10n = AppLocalizations.of(context)!;
                   return Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildNavItem(Icons.home, l10n.home, 0),
-                      _buildNavItem(Icons.eco, l10n.myCrops, 1),
-                      _buildNavItem(Icons.groups, l10n.community, 2),
-                      _buildNavItem(Icons.chat, l10n.chat, 3),
-                      _buildNavItem(Icons.medical_services, l10n.consult, 4),
-                      _buildNavItem(Icons.person, l10n.profile, 5),
+                      Expanded(
+                        child: _buildNavItem(
+                          icon: Icons.home,
+                          label: l10n.home,
+                          index: 0,
+                          isCompactNav: isCompactNav,
+                          iconSize: iconSize,
+                          labelFontSize: labelFontSize,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildNavItem(
+                          icon: Icons.groups,
+                          label: l10n.community,
+                          index: 1,
+                          isCompactNav: isCompactNav,
+                          iconSize: iconSize,
+                          labelFontSize: labelFontSize,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildNavItem(
+                          icon: Icons.chat,
+                          label: l10n.chat,
+                          index: 2,
+                          isCompactNav: isCompactNav,
+                          iconSize: iconSize,
+                          labelFontSize: labelFontSize,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildNavItem(
+                          icon: Icons.medical_services,
+                          label: l10n.consult,
+                          index: 3,
+                          isCompactNav: isCompactNav,
+                          iconSize: iconSize,
+                          labelFontSize: labelFontSize,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildNavItem(
+                          icon: Icons.person,
+                          label: l10n.profile,
+                          index: 4,
+                          isCompactNav: isCompactNav,
+                          iconSize: iconSize,
+                          labelFontSize: labelFontSize,
+                        ),
+                      ),
                     ],
                   );
                 },
@@ -112,7 +177,14 @@ class _FarmerDashboardState extends State<FarmerDashboard> {
     );
   }
 
-  Widget _buildNavItem(IconData icon, String label, int index) {
+  Widget _buildNavItem({
+    required IconData icon,
+    required String label,
+    required int index,
+    required bool isCompactNav,
+    required double iconSize,
+    required double labelFontSize,
+  }) {
     final isSelected = _selectedIndex == index;
     return GestureDetector(
       onTap: () {
@@ -120,7 +192,7 @@ class _FarmerDashboardState extends State<FarmerDashboard> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: isCompactNav ? 6 : 10, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? AppTheme.primaryGreen.withOpacity(0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
@@ -131,14 +203,17 @@ class _FarmerDashboardState extends State<FarmerDashboard> {
             Icon(
               icon,
               color: isSelected ? AppTheme.primaryGreen : Colors.grey,
-              size: 24,
+              size: iconSize,
             ),
             const SizedBox(height: 4),
             Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: TextStyle(
                 color: isSelected ? AppTheme.primaryGreen : Colors.grey,
-                fontSize: 11,
+                fontSize: labelFontSize,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
               ),
             ),
@@ -287,19 +362,46 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                           children: [
                             Expanded(
                               child: _QuickActionCard(
-                                icon: Icons.add_circle_outline,
-                                label: AppLocalizations.of(context)!.addCrop,
+                                icon: Icons.eco,
+                                label: AppLocalizations.of(context)!.myCrops,
                                 color: AppTheme.primaryGreen,
-                                onTap: () {},
+                                onTap: () {
+                                  final authState = context.read<AuthBloc>().state;
+                                  if (authState is AuthSuccess) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => BlocProvider(
+                                          create: (context) => ProductBloc(
+                                            productRepository: ProductRepository(),
+                                          )..add(LoadMyProducts(authState.token)),
+                                          child: const MyCropsScreen(),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: _QuickActionCard(
-                                icon: Icons.local_offer,
-                                label: AppLocalizations.of(context)!.sellProduct,
-                                color: const Color(0xFF2196F3),
-                                onTap: () {},
+                                icon: Icons.smart_toy,
+                                label: AppLocalizations.of(context)!.aiAssistant,
+                                color: const Color(0xFFFF9800),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => BlocProvider(
+                                        create: (context) => ChatbotBloc(
+                                          chatbotService: ChatbotService(),
+                                        ),
+                                        child: const AIChatbotScreen(),
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                             ),
                           ],
@@ -309,10 +411,17 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                           children: [
                             Expanded(
                               child: _QuickActionCard(
-                                icon: Icons.chat_bubble_outline,
-                                label: AppLocalizations.of(context)!.askExpert,
-                                color: const Color(0xFFFF9800),
-                                onTap: () {},
+                                icon: Icons.add_circle_outline,
+                                label: AppLocalizations.of(context)!.addCrop,
+                                color: const Color(0xFF2196F3),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const AddProductScreen(),
+                                    ),
+                                  );
+                                },
                               ),
                             ),
                             const SizedBox(width: 12),
