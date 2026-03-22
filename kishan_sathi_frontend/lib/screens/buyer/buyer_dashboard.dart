@@ -104,8 +104,8 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
     final isTablet = screenWidth >= 768;
 
     final navHorizontalPadding = isTablet ? 20.0 : (isTinyScreen ? 4.0 : 8.0);
-    final navVerticalPadding = isTablet ? 10.0 : 8.0;
-    final navHeight = isTablet ? 86.0 : (isTinyScreen ? 68.0 : 74.0);
+    final navVerticalPadding = isTablet ? 8.0 : (isTinyScreen ? 4.0 : 6.0);
+    final navMinHeight = isTablet ? 72.0 : (isTinyScreen ? 56.0 : 62.0);
     final iconSize = isTablet ? 26.0 : (isTinyScreen ? 18.0 : (isCompactNav ? 20.0 : 24.0));
     final labelFontSize = (isTablet ? 12.0 : (isTinyScreen ? 8.0 : (isCompactNav ? 9.0 : 11.0))) /
         textScaleFactor;
@@ -127,7 +127,7 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
       child: Scaffold(
         body: _buildScreens()[_selectedIndex],
         bottomNavigationBar: Container(
-          height: navHeight,
+          constraints: BoxConstraints(minHeight: navMinHeight),
           decoration: BoxDecoration(
             color: Colors.white,
             boxShadow: [
@@ -226,7 +226,7 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(horizontal: isCompactNav ? 6 : 10, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: isCompactNav ? 6 : 8, vertical: 4),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF2196F3).withOpacity(0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
