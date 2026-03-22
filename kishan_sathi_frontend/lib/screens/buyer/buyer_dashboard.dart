@@ -95,8 +95,20 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    final textScaleFactor = mediaQuery.textScaleFactor.clamp(0.9, 1.2);
+
+    final isTinyScreen = screenWidth < 360;
     final isCompactNav = screenWidth < 420;
+    final isTablet = screenWidth >= 768;
+
+    final navHorizontalPadding = isTablet ? 20.0 : (isTinyScreen ? 4.0 : 8.0);
+    final navVerticalPadding = isTablet ? 10.0 : 8.0;
+    final navHeight = isTablet ? 86.0 : (isTinyScreen ? 68.0 : 74.0);
+    final iconSize = isTablet ? 26.0 : (isTinyScreen ? 18.0 : (isCompactNav ? 20.0 : 24.0));
+    final labelFontSize = (isTablet ? 12.0 : (isTinyScreen ? 8.0 : (isCompactNav ? 9.0 : 11.0))) /
+        textScaleFactor;
 
     return MultiBlocProvider(
       providers: [
@@ -115,6 +127,7 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
       child: Scaffold(
         body: _buildScreens()[_selectedIndex],
         bottomNavigationBar: Container(
+          height: navHeight,
           decoration: BoxDecoration(
             color: Colors.white,
             boxShadow: [
@@ -127,18 +140,66 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
           ),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              padding: EdgeInsets.symmetric(
+                horizontal: navHorizontalPadding,
+                vertical: navVerticalPadding,
+              ),
               child: Builder(
                 builder: (context) {
                   final l10n = AppLocalizations.of(context)!;
                   return Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      Expanded(child: _buildNavItem(Icons.home, l10n.home, 0, isCompactNav)),
-                      Expanded(child: _buildNavItem(Icons.groups, l10n.community, 1, isCompactNav)),
-                      Expanded(child: _buildNavItem(Icons.chat, l10n.chat, 2, isCompactNav)),
-                      Expanded(child: _buildNavItem(Icons.favorite, l10n.favorites, 4, isCompactNav)),
-                      Expanded(child: _buildNavItem(Icons.person, l10n.profile, 5, isCompactNav)),
+                      Expanded(
+                        child: _buildNavItem(
+                          icon: Icons.home,
+                          label: l10n.home,
+                          index: 0,
+                          isCompactNav: isCompactNav,
+                          iconSize: iconSize,
+                          labelFontSize: labelFontSize,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildNavItem(
+                          icon: Icons.groups,
+                          label: l10n.community,
+                          index: 1,
+                          isCompactNav: isCompactNav,
+                          iconSize: iconSize,
+                          labelFontSize: labelFontSize,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildNavItem(
+                          icon: Icons.chat,
+                          label: l10n.chat,
+                          index: 2,
+                          isCompactNav: isCompactNav,
+                          iconSize: iconSize,
+                          labelFontSize: labelFontSize,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildNavItem(
+                          icon: Icons.favorite,
+                          label: l10n.favorites,
+                          index: 4,
+                          isCompactNav: isCompactNav,
+                          iconSize: iconSize,
+                          labelFontSize: labelFontSize,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildNavItem(
+                          icon: Icons.person,
+                          label: l10n.profile,
+                          index: 5,
+                          isCompactNav: isCompactNav,
+                          iconSize: iconSize,
+                          labelFontSize: labelFontSize,
+                        ),
+                      ),
                     ],
                   );
                 },
@@ -150,7 +211,14 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
     );
   }
 
-  Widget _buildNavItem(IconData icon, String label, int index, bool isCompactNav) {
+  Widget _buildNavItem({
+    required IconData icon,
+    required String label,
+    required int index,
+    required bool isCompactNav,
+    required double iconSize,
+    required double labelFontSize,
+  }) {
     final isSelected = _selectedIndex == index;
     return GestureDetector(
       onTap: () {
@@ -169,7 +237,7 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
             Icon(
               icon,
               color: isSelected ? const Color(0xFF2196F3) : Colors.grey,
-              size: isCompactNav ? 20 : 24,
+              size: iconSize,
             ),
             const SizedBox(height: 4),
             Text(
@@ -179,7 +247,7 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: isSelected ? const Color(0xFF2196F3) : Colors.grey,
-                fontSize: isCompactNav ? 9 : 11,
+                fontSize: labelFontSize,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
               ),
             ),
