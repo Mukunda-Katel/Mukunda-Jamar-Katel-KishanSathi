@@ -274,6 +274,12 @@ class _PostCard extends StatelessWidget {
     required this.formatTime,
   });
 
+  String _initialFromName(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return '?';
+    return trimmed[0].toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -298,13 +304,20 @@ class _PostCard extends StatelessWidget {
                   CircleAvatar(
                     radius: 20,
                     backgroundColor: const Color(0xFF4CAF50),
-                    child: Text(
-                      post.author.fullName[0].toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    backgroundImage: (post.author.profilePictureUrl != null &&
+                            post.author.profilePictureUrl!.isNotEmpty)
+                        ? NetworkImage(post.author.profilePictureUrl!)
+                        : null,
+                    child: (post.author.profilePictureUrl == null ||
+                            post.author.profilePictureUrl!.isEmpty)
+                        ? Text(
+                            _initialFromName(post.author.fullName),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          )
+                        : null,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
