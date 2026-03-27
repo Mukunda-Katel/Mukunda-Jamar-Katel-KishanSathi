@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/cart_model.dart';
 
 class CartService {
-  final String baseUrl = 'http://10.0.2.2:8000/api/buyer/cart';
+  final String baseUrl = 'https://mukunda-jamar-katel-kishansathi.onrender.com/api/buyer/cart';
 
   Future<Cart> getCart(String token) async {
     final response = await http.get(
