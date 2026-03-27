@@ -1,15 +1,157 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 
+import '../../core/config/app_config.dart';
+import '../../features/auth/data/models/user_model.dart';
 import '../../core/theme/app_theme.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/bloc/auth_event.dart';
 import '../../features/auth/presentation/bloc/auth_state.dart';
 import '../settings/language_settings_screen.dart';
 
-class BuyerProfileScreen extends StatelessWidget {
+class BuyerProfileScreen extends StatefulWidget {
   const BuyerProfileScreen({super.key});
+
+  @override
+  State<BuyerProfileScreen> createState() => _BuyerProfileScreenState();
+}
+
+class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
+  final ImagePicker _imagePicker = ImagePicker();
+  bool _isUploadingImage = false;
+  String? _profileImageUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfileImageFromServer();
+  }
+
+  String _normalizedToken(String token) {
+    final trimmed = token.trim();
+    if (trimmed.startsWith('Token ')) {
+      return trimmed.substring(6).trim();
+    }
+    if (trimmed.startsWith('Bearer ')) {
+      return trimmed.substring(7).trim();
+    }
+    return trimmed;
+  }
+
+  String? _resolveImageUrl(String? rawUrl) {
+    if (rawUrl == null || rawUrl.isEmpty) return null;
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+      return rawUrl;
+    }
+    return AppConfig.getUrl(rawUrl.startsWith('/') ? rawUrl : '/$rawUrl');
+  }
+
+  Future<void> _loadProfileImageFromServer() async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthSuccess) return;
+
+    try {
+      final response = await http.get(
+        Uri.parse(AppConfig.getUrl('/api/auth/profile/')),
+        headers: {
+          'Authorization': 'Token ${_normalizedToken(authState.token)}',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final fetchedUser = UserModel.fromJson(body);
+        final url = _resolveImageUrl(body['profile_picture_url'] as String?);
+        if (!mounted) return;
+        setState(() {
+          _profileImageUrl = url;
+        });
+        context.read<AuthBloc>().add(AuthUserUpdated(user: fetchedUser));
+      }
+    } catch (_) {
+      // Keep existing UI fallback if profile fetch fails.
+    }
+  }
+
+  Future<void> _pickAndUploadProfileImage({required String token}) async {
+    if (_isUploadingImage) return;
+
+    final pickedFile = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 1200,
+    );
+
+    if (pickedFile == null) return;
+
+    setState(() {
+      _isUploadingImage = true;
+    });
+
+    try {
+      final request = http.MultipartRequest(
+        'PATCH',
+        Uri.parse(AppConfig.getUrl('/api/auth/profile/')),
+      );
+
+      request.headers['Authorization'] = 'Token ${_normalizedToken(token)}';
+      request.files.add(
+        await http.MultipartFile.fromPath('profile_picture', File(pickedFile.path).path),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      final body = response.body.isNotEmpty ? jsonDecode(response.body) : <String, dynamic>{};
+
+      if (response.statusCode == 200) {
+        final user = body['user'] as Map<String, dynamic>?;
+        final updatedUser = user != null ? UserModel.fromJson(user) : null;
+        final imageUrl = _resolveImageUrl(user?['profile_picture_url'] as String?);
+        setState(() {
+          _profileImageUrl = imageUrl;
+        });
+        if (updatedUser != null) {
+          context.read<AuthBloc>().add(AuthUserUpdated(user: updatedUser));
+        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile picture updated successfully.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text((body['error'] ?? body['message'] ?? 'Failed to update profile picture.').toString()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to upload image: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingImage = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +168,7 @@ class BuyerProfileScreen extends StatelessWidget {
       child: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, state) {
           final user = state is AuthSuccess ? state.user : null;
+          final imageUrl = _profileImageUrl ?? _resolveImageUrl(user?.profilePictureUrl);
 
           return Scaffold(
             backgroundColor: AppTheme.backgroundColor,
@@ -61,30 +204,74 @@ class BuyerProfileScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 24),
-                          Container(
-                            width: 100,
-                            height: 100,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
+                          Stack(
+                            children: [
+                              Container(
+                                width: 100,
+                                height: 100,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                  image: imageUrl != null && imageUrl.isNotEmpty
+                                      ? DecorationImage(
+                                          image: NetworkImage(imageUrl),
+                                          fit: BoxFit.cover,
+                                        )
+                                      : null,
                                 ),
-                              ],
-                            ),
-                            child: Center(
-                              child: Text(
-                                user?.initials ?? 'B',
-                                style: const TextStyle(
-                                  color: AppTheme.primaryGreen,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 34,
+                                child: imageUrl == null || imageUrl.isEmpty
+                                    ? Center(
+                                        child: Text(
+                                          user?.initials ?? 'B',
+                                          style: const TextStyle(
+                                            color: AppTheme.primaryGreen,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 34,
+                                          ),
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                              Positioned(
+                                right: 0,
+                                bottom: 0,
+                                child: InkWell(
+                                  onTap: state is AuthSuccess
+                                      ? () => _pickAndUploadProfileImage(token: state.token)
+                                      : null,
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primaryGreen,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white, width: 2),
+                                    ),
+                                    child: _isUploadingImage
+                                        ? const SizedBox(
+                                            height: 14,
+                                            width: 14,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                            ),
+                                          )
+                                        : const Icon(
+                                            Icons.camera_alt,
+                                            color: Colors.white,
+                                            size: 14,
+                                          ),
+                                  ),
                                 ),
                               ),
-                            ),
+                            ],
                           ),
                           const SizedBox(height: 14),
                           Text(
