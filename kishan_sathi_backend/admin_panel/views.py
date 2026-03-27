@@ -4,8 +4,6 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Count, Q
 from django.utils import timezone
-from django.core.mail import send_mail
-from django.conf import settings
 from datetime import timedelta
 
 from Users.models import User
@@ -140,41 +138,8 @@ class DoctorVerificationViewSet(viewsets.ReadOnlyModelViewSet):
         doctor.approved_at = timezone.now()
         doctor.save()
         
-        # Send approval email
-        try:
-            subject = 'Congratulations! Your Doctor Account Has Been Approved - Kishan Sathi'
-            message = f"""
-Dear Dr. {doctor.full_name},
-
-Congratulations! We are pleased to inform you that your agricultural consultant/doctor account on Kishan Sathi has been successfully verified and approved.
-
-You can now:
-- Provide agricultural consultations to farmers
-- Respond to farmer queries
-- Access the consultation portal
-- Build your professional profile
-
-Your credentials have been reviewed and verified. You may now log in to your account and start helping farmers with your expertise.
-
-If you have any questions or need assistance, please don't hesitate to contact our support team.
-
-Thank you for being a part of Kishan Sathi!
-
-Best regards,
-Kishan Sathi Admin Team
-"""
-            send_mail(
-                subject,
-                message,
-                settings.DEFAULT_FROM_EMAIL,
-                [doctor.email],
-                fail_silently=True,
-            )
-        except Exception as e:
-            print(f"Failed to send approval email: {e}")
-        
         return Response({
-            'message': f'Doctor {doctor.full_name} approved successfully and notified via email',
+            'message': f'Doctor {doctor.full_name} approved successfully',
             'doctor': DoctorVerificationSerializer(doctor).data
         })
 
@@ -188,42 +153,13 @@ Kishan Sathi Admin Team
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        reason = request.data.get('reason', 'Your application did not meet our verification requirements.')
+        reason = request.data.get('reason', '')
         doctor.doctor_status = 'rejected'
         doctor.is_doctor_verified = False
         doctor.save()
         
-        # Send rejection email
-        try:
-            subject = 'Update on Your Doctor Account Application - Kishan Sathi'
-            message = f"""
-Dear {doctor.full_name},
-
-Thank you for your interest in becoming an agricultural consultant on Kishan Sathi.
-
-After careful review of your application, we regret to inform you that we are unable to approve your account at this time.
-
-Reason: {reason}
-
-If you believe this decision was made in error or if you would like to reapply with additional documentation, please feel free to contact our support team.
-
-We appreciate your interest in Kishan Sathi and wish you the best in your professional endeavors.
-
-Best regards,
-Kishan Sathi Admin Team
-"""
-            send_mail(
-                subject,
-                message,
-                settings.DEFAULT_FROM_EMAIL,
-                [doctor.email],
-                fail_silently=True,
-            )
-        except Exception as e:
-            print(f"Failed to send rejection email: {e}")
-        
         return Response({
-            'message': f'Doctor {doctor.full_name} rejected successfully and notified via email',
+            'message': f'Doctor {doctor.full_name} rejected successfully',
             'reason': reason,
             'doctor': DoctorVerificationSerializer(doctor).data
         })

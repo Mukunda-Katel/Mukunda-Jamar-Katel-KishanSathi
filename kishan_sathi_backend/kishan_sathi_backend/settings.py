@@ -4,6 +4,7 @@ Django settings for kishan_sathi_backend project.
 
 from pathlib import Path
 from decouple import config, Csv
+from urllib.parse import urlparse, unquote
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -38,6 +39,7 @@ EXTERNAL_APPS = [
     'authentication',
     'farmer',
     'buyer',
+    'payment',
     'chat',
     'posts',
     'consultation',
@@ -111,14 +113,56 @@ CHANNEL_LAYERS = {
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
+
+
+# DATABASES = {
+
+#     'default': {
+
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+
+#         'NAME': 'kishansathi',
+
+#         'USER': 'postgres',
+
+#         'PASSWORD': '1234',
+
+#         'HOST': 'localhost',
+
+#         'PORT': '5433',
+
+#     }
+
+# }
+
+DATABASE_URL = config('DATABASE_URL', default='').strip()
+
+if DATABASE_URL:
+    parsed_db_url = urlparse(DATABASE_URL)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': parsed_db_url.path.lstrip('/'),
+            'USER': unquote(parsed_db_url.username or ''),
+            'PASSWORD': unquote(parsed_db_url.password or ''),
+            'HOST': parsed_db_url.hostname or '',
+            'PORT': str(parsed_db_url.port or ''),
+        }
     }
-}
-
-
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -227,6 +271,13 @@ ADMIN_EMAIL = config('ADMIN_EMAIL', default='admin@kishansathi.com')
 
 # Weather API Configuration
 WEATHER_API_KEY = config('WEATHER_API_KEY', default='')
+
+# Khalti Configuration
+KHALTI_SECRET_KEY = config('KHALTI_SECRET_KEY', default='')
+KHALTI_PUBLIC_KEY = config('KHALTI_PUBLIC_KEY', default='')
+KHALTI_BASE_URL = config('KHALTI_BASE_URL', default='https://khalti.com')
+KHALTI_WEBSITE_URL = config('KHALTI_WEBSITE_URL', default='https://example.com')
+KHALTI_RETURN_URL = config('KHALTI_RETURN_URL', default='')
 
 # Firebase Cloud Messaging Configuration (V1 API)
 # Download service account JSON from Firebase Console > Project Settings > Service Accounts

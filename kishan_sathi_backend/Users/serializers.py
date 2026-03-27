@@ -10,6 +10,7 @@ class UserSerializer(serializers.ModelSerializer):
     )
     #NEW: Include certificate URL
     certificate_url = serializers.SerializerMethodField()
+    profile_picture_url = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -18,6 +19,8 @@ class UserSerializer(serializers.ModelSerializer):
             'email',
             'full_name',
             'phone_number',
+            'profile_picture',
+            'profile_picture_url',
             'role',
             'role_display',
             'specialization',
@@ -49,4 +52,13 @@ class UserSerializer(serializers.ModelSerializer):
             if request:
                 return request.build_absolute_uri(obj.certificate.url)
             return obj.certificate.url
+        return None
+
+    def get_profile_picture_url(self, obj):
+        """Return full URL for profile picture file"""
+        if obj.profile_picture:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.profile_picture.url)
+            return obj.profile_picture.url
         return None

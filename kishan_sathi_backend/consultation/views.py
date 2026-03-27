@@ -9,6 +9,7 @@ from .models import ConsultationRequest
 from .serializers import ConsultationRequestSerializer, DoctorSerializer
 from Users.models import User
 from chat.models import ChatRoom
+from kishan_sathi_backend.fcm_utils import send_consultation_approved_notification, send_consultation_rejected_notification
 
 
 class ApprovedDoctorViewSet(viewsets.ReadOnlyModelViewSet):
@@ -95,6 +96,13 @@ class ConsultationRequestViewSet(viewsets.ModelViewSet):
         consultation_request.chat_room = chat_room
         consultation_request.save()
         
+        # Send push notification to farmer
+        try:
+            send_consultation_approved_notification(consultation_request.farmer)
+        except Exception as e:
+            # Log error but don't fail the request
+            print(f"Failed to send push notification: {e}")
+        
         serializer = self.get_serializer(consultation_request)
         return Response(serializer.data)
     
@@ -123,6 +131,13 @@ class ConsultationRequestViewSet(viewsets.ModelViewSet):
         
         consultation_request.status = 'rejected'
         consultation_request.save()
+        
+        # Send push notification to farmer
+        try:
+            send_consultation_rejected_notification(consultation_request.farmer)
+        except Exception as e:
+            # Log error but don't fail the request
+            print(f"Failed to send push notification: {e}")
         
         serializer = self.get_serializer(consultation_request)
         return Response(serializer.data)

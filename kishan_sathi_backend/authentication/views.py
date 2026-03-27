@@ -2,6 +2,8 @@ from django.contrib.auth import authenticate, get_user_model
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import parser_classes
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from Users.serializers import UserSerializer
@@ -117,3 +119,65 @@ def logout_view(request):
         {'error': 'User not authenticated.'},
         status=status.HTTP_400_BAD_REQUEST
     )
+
+
+@api_view(['POST'])
+def update_fcm_token(request):
+    """Update user's FCM token for push notifications"""
+    if not request.user.is_authenticated:
+        return Response(
+            {'error': 'Authentication required.'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+    
+    fcm_token = request.data.get('fcm_token')
+    device_type = request.data.get('device_type', 'android')
+    
+    if not fcm_token:
+        return Response(
+            {'error': 'FCM token is required.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Update user's FCM token
+    request.user.fcm_token = fcm_token
+    request.user.device_type = device_type
+    request.user.save()
+    
+    return Response({
+        'message': 'FCM token updated successfully.',
+        'fcm_token': fcm_token
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET', 'PATCH'])
+@parser_classes([MultiPartParser, FormParser, JSONParser])
+def profile_view(request):
+    """Get current user profile or update profile fields (including profile picture)."""
+    if not request.user.is_authenticated:
+        return Response(
+            {'error': 'Authentication required.'},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    if request.method == 'GET':
+        serializer = UserSerializer(request.user, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    serializer = UserSerializer(
+        request.user,
+        data=request.data,
+        partial=True,
+        context={'request': request},
+    )
+    if serializer.is_valid():
+        serializer.save()
+        return Response(
+            {
+                'message': 'Profile updated successfully.',
+                'user': serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

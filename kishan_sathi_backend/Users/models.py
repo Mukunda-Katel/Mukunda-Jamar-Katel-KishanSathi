@@ -60,6 +60,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=150)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
+    profile_picture = models.ImageField(
+        upload_to='profile_pictures/',
+        blank=True,
+        null=True,
+        help_text='Optional user profile picture',
+    )
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='farmer')
     
     # Doctor-specific fields
@@ -88,6 +94,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     approved_at = models.DateTimeField(blank=True, null=True)
+    
+    # FCM token for push notifications
+    fcm_token = models.TextField(blank=True, null=True, help_text='Firebase Cloud Messaging token')
+    device_type = models.CharField(max_length=10, blank=True, null=True, choices=[('android', 'Android'), ('ios', 'iOS')])
     
     # Django required fields
     is_active = models.BooleanField(default=True)

@@ -1,4 +1,5 @@
 from decimal import Decimal
+from django.db import transaction
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -174,4 +175,55 @@ class CartViewSet(viewsets.ViewSet):
                 'count': 0,
                 'total_price': 0
             })
+
+    @action(detail=False, methods=['post'])
+    def complete_purchase(self, request):
+        """Finalize checkout: decrement stock for all cart items, then clear cart."""
+        try:
+            cart = Cart.objects.get(buyer=request.user)
+        except Cart.DoesNotExist:
+            return Response(
+                {'error': 'Cart not found'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        cart_items = list(cart.items.select_related('product').all())
+        if not cart_items:
+            return Response(
+                {'error': 'Cart is empty'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            for item in cart_items:
+                product = Product.objects.select_for_update().get(id=item.product_id)
+
+                if product.status != 'available':
+                    return Response(
+                        {'error': f'{product.name} is not available'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                if Decimal(str(item.quantity)) > Decimal(str(product.quantity)):
+                    return Response(
+                        {
+                            'error': (
+                                f'Only {product.quantity} {product.unit} available for {product.name}'
+                            )
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                product.quantity = Decimal(str(product.quantity)) - Decimal(str(item.quantity))
+                if product.quantity <= 0:
+                    product.quantity = Decimal('0')
+                    product.status = 'sold_out'
+                product.save(update_fields=['quantity', 'status', 'updated_at'])
+
+            cart.items.all().delete()
+
+        return Response(
+            {'message': 'Purchase completed successfully'},
+            status=status.HTTP_200_OK,
+        )
 

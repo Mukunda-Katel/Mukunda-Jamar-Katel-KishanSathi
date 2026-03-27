@@ -70,3 +70,7 @@ coverage.xml
 # OS files
 Thumbs.db
 .DS_Store
+
+
+#firebase service
+firebase-service-account.json

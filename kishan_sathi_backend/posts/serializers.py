@@ -5,9 +5,19 @@ from Users.models import User
 
 class AuthorSerializer(serializers.ModelSerializer):
     """Serializer for post author information"""
+    profile_picture_url = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['id', 'full_name', 'email', 'role']
+        fields = ['id', 'full_name', 'email', 'role', 'profile_picture_url']
+
+    def get_profile_picture_url(self, obj):
+        if obj.profile_picture:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.profile_picture.url)
+            return obj.profile_picture.url
+        return None
 
 
 class CommentSerializer(serializers.ModelSerializer):

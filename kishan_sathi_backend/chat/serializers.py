@@ -5,9 +5,19 @@ from Users.models import User
 
 class UserSerializer(serializers.ModelSerializer):
     """Serializer for user information in chat"""
+    profile_picture_url = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['id', 'full_name', 'email', 'role']
+        fields = ['id', 'full_name', 'email', 'role', 'profile_picture_url']
+
+    def get_profile_picture_url(self, obj):
+        if obj.profile_picture:
+            request = self.context.get('request')
+            if request is not None:
+                return request.build_absolute_uri(obj.profile_picture.url)
+            return obj.profile_picture.url
+        return None
 
 
 class MessageSerializer(serializers.ModelSerializer):
@@ -64,7 +74,7 @@ class ChatRoomSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             other_users = obj.participants.exclude(id=request.user.id)
             if other_users.exists():
-                return UserSerializer(other_users.first()).data
+                return UserSerializer(other_users.first(), context=self.context).data
         return None
     
     def create(self, validated_data):
@@ -94,7 +104,7 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             other_users = obj.participants.exclude(id=request.user.id)
             if other_users.exists():
-                return UserSerializer(other_users.first()).data
+                return UserSerializer(other_users.first(), context=self.context).data
         return None
     
     def get_last_message(self, obj):
