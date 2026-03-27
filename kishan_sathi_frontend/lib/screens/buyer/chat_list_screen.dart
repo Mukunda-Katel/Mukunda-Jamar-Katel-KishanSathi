@@ -54,6 +54,11 @@ class _BuyerChatListView extends StatelessWidget {
   
   const _BuyerChatListView({required this.onRefresh});
 
+  String _initialFor(String name) {
+    if (name.isEmpty) return '?';
+    return name[0].toUpperCase();
+  }
+
   String _formatTimestamp(DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
@@ -207,6 +212,7 @@ class _BuyerChatListView extends StatelessWidget {
                           context,
                           chatRoom.id,
                           otherUser.fullName,
+                          otherUser.profilePictureUrl,
                           otherUser.role,
                           chatRoom.lastMessage?.content ?? 'No messages yet',
                           _formatTimestamp(
@@ -232,6 +238,7 @@ class _BuyerChatListView extends StatelessWidget {
     BuildContext context,
     int roomId,
     String userName,
+    String? profilePictureUrl,
     String userRole,
     String lastMessage,
     String timestamp,
@@ -247,6 +254,7 @@ class _BuyerChatListView extends StatelessWidget {
           MaterialPageRoute(
             builder: (context) => BuyerChatScreen(
               userName: userName,
+              profileImageUrl: profilePictureUrl,
               userRole: userRole,
               chatRoomId: roomId,
             ),
@@ -276,14 +284,19 @@ class _BuyerChatListView extends StatelessWidget {
               CircleAvatar(
                 radius: 28,
                 backgroundColor: const Color(0xFF2196F3).withOpacity(0.1),
-                child: Text(
-                  userName[0].toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2196F3),
-                  ),
-                ),
+                backgroundImage: profilePictureUrl != null && profilePictureUrl.isNotEmpty
+                    ? NetworkImage(profilePictureUrl)
+                    : null,
+                child: profilePictureUrl == null || profilePictureUrl.isEmpty
+                    ? Text(
+                        _initialFor(userName),
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2196F3),
+                        ),
+                      )
+                    : null,
               ),
               const SizedBox(width: 12),
               Expanded(
