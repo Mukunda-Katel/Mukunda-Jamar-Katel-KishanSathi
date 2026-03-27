@@ -23,6 +23,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   Post? _currentPost;
   List<Comment> _comments = [];
 
+  String _initialFromName(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return '?';
+    return trimmed[0].toUpperCase();
+  }
+
   @override
   void dispose() {
     _commentController.dispose();
@@ -150,15 +156,34 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                   CircleAvatar(
                                     radius: 24,
                                     backgroundColor: const Color(0xFF4CAF50),
-                                    child: Text(
-                                      _currentPost!.author.fullName[0]
-                                          .toUpperCase(),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 20,
-                                      ),
-                                    ),
+                                    backgroundImage:
+                                        (_currentPost!.author.profilePictureUrl !=
+                                                    null &&
+                                                _currentPost!
+                                                    .author
+                                                    .profilePictureUrl!
+                                                    .isNotEmpty)
+                                            ? NetworkImage(_currentPost!
+                                                .author.profilePictureUrl!)
+                                            : null,
+                                    child: (_currentPost!
+                                                    .author
+                                                    .profilePictureUrl ==
+                                                null ||
+                                            _currentPost!
+                                                .author
+                                                .profilePictureUrl!
+                                                .isEmpty)
+                                        ? Text(
+                                            _initialFromName(
+                                                _currentPost!.author.fullName),
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 20,
+                                            ),
+                                          )
+                                        : null,
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -446,6 +471,12 @@ class _CommentCard extends StatelessWidget {
     required this.formatTime,
   });
 
+  String _initialFromName(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return '?';
+    return trimmed[0].toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -460,14 +491,21 @@ class _CommentCard extends StatelessWidget {
                 CircleAvatar(
                   radius: 16,
                   backgroundColor: const Color(0xFF4CAF50),
-                  child: Text(
-                    comment.author.fullName[0].toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
+                  backgroundImage: (comment.author.profilePictureUrl != null &&
+                          comment.author.profilePictureUrl!.isNotEmpty)
+                      ? NetworkImage(comment.author.profilePictureUrl!)
+                      : null,
+                  child: (comment.author.profilePictureUrl == null ||
+                          comment.author.profilePictureUrl!.isEmpty)
+                      ? Text(
+                          _initialFromName(comment.author.fullName),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        )
+                      : null,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
