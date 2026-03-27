@@ -89,6 +89,8 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    final userName = authState is AuthSuccess ? authState.user.fullName : 'Buyer';
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 600;
     final horizontalPadding = screenWidth < 600 ? 16.0 : 20.0;
@@ -186,9 +188,9 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                const Text(
-                                  'Find fresh produce',
-                                  style: TextStyle(
+                                Text(
+                                  'Hello, $userName',
+                                  style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 24,
                                     fontWeight: FontWeight.bold,
