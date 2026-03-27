@@ -14,12 +14,14 @@ import 'package:intl/intl.dart';
 
 class BuyerChatScreen extends StatelessWidget {
   final String userName;
+  final String? profileImageUrl;
   final String userRole;
   final int chatRoomId;
 
   const BuyerChatScreen({
     super.key,
     required this.userName,
+    this.profileImageUrl,
     required this.userRole,
     required this.chatRoomId,
   });
@@ -36,6 +38,7 @@ class BuyerChatScreen extends StatelessWidget {
       )..add(LoadMessages(roomId: chatRoomId)),
       child: _ChatScreenContent(
         userName: userName,
+        profileImageUrl: profileImageUrl,
         userRole: userRole,
         chatRoomId: chatRoomId,
       ),
@@ -45,11 +48,13 @@ class BuyerChatScreen extends StatelessWidget {
 
 class _ChatScreenContent extends StatefulWidget {
   final String userName;
+  final String? profileImageUrl;
   final String userRole;
   final int chatRoomId;
 
   const _ChatScreenContent({
     required this.userName,
+    this.profileImageUrl,
     required this.userRole,
     required this.chatRoomId,
   });
@@ -67,6 +72,11 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
   int? _currentUserId;
   List<ChatMessage> _messages = [];
   File? _selectedImage;
+
+  String _initialFor(String name) {
+    if (name.isEmpty) return '?';
+    return name[0].toUpperCase();
+  }
 
   @override
   void initState() {
@@ -178,14 +188,19 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
             CircleAvatar(
               radius: 20,
               backgroundColor: Colors.white,
-              child: Text(
-                widget.userName[0].toUpperCase(),
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryGreen,
-                ),
-              ),
+              backgroundImage: widget.profileImageUrl != null && widget.profileImageUrl!.isNotEmpty
+                  ? NetworkImage(widget.profileImageUrl!)
+                  : null,
+              child: widget.profileImageUrl == null || widget.profileImageUrl!.isEmpty
+                  ? Text(
+                      _initialFor(widget.userName),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryGreen,
+                      ),
+                    )
+                  : null,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -568,14 +583,19 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
             CircleAvatar(
               radius: 16,
               backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
-              child: Text(
-                widget.userName[0].toUpperCase(),
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryGreen,
-                ),
-              ),
+              backgroundImage: widget.profileImageUrl != null && widget.profileImageUrl!.isNotEmpty
+                  ? NetworkImage(widget.profileImageUrl!)
+                  : null,
+              child: widget.profileImageUrl == null || widget.profileImageUrl!.isEmpty
+                  ? Text(
+                      _initialFor(widget.userName),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryGreen,
+                      ),
+                    )
+                  : null,
             ),
             const SizedBox(width: 8),
           ],
