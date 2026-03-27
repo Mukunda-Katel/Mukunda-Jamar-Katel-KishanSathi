@@ -5,6 +5,7 @@ class UserModel extends Equatable {
   final String email;
   final String fullName;
   final String? phoneNumber;
+  final String? profilePictureUrl;
   final String role;
   final String? roleDisplay;
   final bool isDoctorVerified;
@@ -20,6 +21,7 @@ class UserModel extends Equatable {
     required this.email,
     required this.fullName,
     this.phoneNumber,
+    this.profilePictureUrl,
     required this.role,
     this.roleDisplay,
     this.isDoctorVerified = false,
@@ -37,6 +39,7 @@ class UserModel extends Equatable {
       email: json['email'] as String,
       fullName: json['full_name'] as String,
       phoneNumber: json['phone_number'] as String?,
+      profilePictureUrl: json['profile_picture_url'] as String?,
       role: json['role'] as String,
       roleDisplay: json['role_display'] as String?,
       isDoctorVerified: json['is_doctor_verified'] as bool? ?? false,
@@ -55,6 +58,7 @@ class UserModel extends Equatable {
       'email': email,
       'full_name': fullName,
       'phone_number': phoneNumber,
+      'profile_picture_url': profilePictureUrl,
       'role': role,
       'role_display': roleDisplay,
       'is_doctor_verified': isDoctorVerified,
@@ -107,6 +111,7 @@ class UserModel extends Equatable {
     String? email,
     String? fullName,
     String? phoneNumber,
+    String? profilePictureUrl,
     String? role,
     String? roleDisplay,
     bool? isDoctorVerified,
@@ -122,6 +127,7 @@ class UserModel extends Equatable {
       email: email ?? this.email,
       fullName: fullName ?? this.fullName,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      profilePictureUrl: profilePictureUrl ?? this.profilePictureUrl,
       role: role ?? this.role,
       roleDisplay: roleDisplay ?? this.roleDisplay,
       isDoctorVerified: isDoctorVerified ?? this.isDoctorVerified,
@@ -176,6 +182,7 @@ class UserModel extends Equatable {
         email,
         fullName,
         phoneNumber,
+        profilePictureUrl,
         role,
         roleDisplay,
         isDoctorVerified,
