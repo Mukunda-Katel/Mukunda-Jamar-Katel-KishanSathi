@@ -111,12 +111,14 @@ class ChatUser {
   final String fullName;
   final String email;
   final String role;
+  final String? profilePictureUrl;
 
   ChatUser({
     required this.id,
     required this.fullName,
     required this.email,
     required this.role,
+    this.profilePictureUrl,
   });
 
   factory ChatUser.fromJson(Map<String, dynamic> json) {
@@ -125,6 +127,7 @@ class ChatUser {
       fullName: json['full_name'] as String? ?? 'Unknown',
       email: json['email'] as String? ?? '',
       role: json['role'] as String? ?? 'unknown',
+      profilePictureUrl: json['profile_picture_url'] as String?,
     );
   }
 
@@ -134,6 +137,7 @@ class ChatUser {
       'full_name': fullName,
       'email': email,
       'role': role,
+      'profile_picture_url': profilePictureUrl,
     };
   }
 }
