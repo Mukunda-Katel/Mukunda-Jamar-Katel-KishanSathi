@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/notification_model.dart';
 
 class NotificationService {
-  final String baseUrl = 'http://10.0.2.2:8000/api/notifications';
+  final String baseUrl = 'https://mukunda-jamar-katel-kishansathi.onrender.com/api/notifications';
 
   Future<List<NotificationModel>> getNotifications({
     required String token,

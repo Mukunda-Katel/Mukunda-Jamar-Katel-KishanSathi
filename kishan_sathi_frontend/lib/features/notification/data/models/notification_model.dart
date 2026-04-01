@@ -8,6 +8,8 @@ class NotificationModel extends Equatable {
   final bool isRead;
   final int? referenceId;
   final String? referenceType;
+  final String? actorName;
+  final String? actorProfilePictureUrl;
   final DateTime createdAt;
   final DateTime? readAt;
 
@@ -19,6 +21,8 @@ class NotificationModel extends Equatable {
     required this.isRead,
     this.referenceId,
     this.referenceType,
+    this.actorName,
+    this.actorProfilePictureUrl,
     required this.createdAt,
     this.readAt,
   });
@@ -32,6 +36,8 @@ class NotificationModel extends Equatable {
       isRead: json['is_read'],
       referenceId: json['reference_id'],
       referenceType: json['reference_type'],
+      actorName: json['actor_name'],
+      actorProfilePictureUrl: json['actor_profile_picture_url'],
       createdAt: DateTime.parse(json['created_at']),
       readAt: json['read_at'] != null ? DateTime.parse(json['read_at']) : null,
     );
@@ -46,6 +52,8 @@ class NotificationModel extends Equatable {
       'is_read': isRead,
       'reference_id': referenceId,
       'reference_type': referenceType,
+      'actor_name': actorName,
+      'actor_profile_picture_url': actorProfilePictureUrl,
       'created_at': createdAt.toIso8601String(),
       'read_at': readAt?.toIso8601String(),
     };
@@ -60,6 +68,8 @@ class NotificationModel extends Equatable {
         isRead,
         referenceId,
         referenceType,
+        actorName,
+        actorProfilePictureUrl,
         createdAt,
         readAt,
       ];
