@@ -48,6 +48,7 @@ void main() {
 
 			api.dispose();
 		});
+    
 
 		test('includes role in request body when provided', () async {
 			late Map<String, dynamic> capturedBody;
@@ -63,9 +64,12 @@ void main() {
 							'full_name': 'Buyer Login',
 							'role': 'buyer',
 						}
+            
 					}),
+          
 					200,
 					headers: {'content-type': 'application/json'},
+          
 				);
 			});
 
@@ -78,6 +82,7 @@ void main() {
 			);
 
 			expect(capturedBody['role'], 'buyer');
+      
 
 			api.dispose();
 		});
