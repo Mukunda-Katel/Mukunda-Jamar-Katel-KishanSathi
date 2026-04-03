@@ -34,8 +34,13 @@ def chat_with_ai(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Get API key from environment variable
-        api_key = config('OPENROUTER_API_KEY', default='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')
+        # Get API key from environment variable.
+        api_key = config('OPENROUTER_API_KEY', default='').strip()
+        if not api_key:
+            return Response({
+                'error': 'AI service is not configured. Missing OPENROUTER_API_KEY.',
+                'success': False
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         # System prompt for farming assistant 
         system_context = '''You are an expert agricultural AI assistant for Kishan Sathi, a farming support platform. 
@@ -109,11 +114,32 @@ You can respond in English or Nepali based on the user's language.
                 'success': True
             }, status=status.HTTP_200_OK)
         else:
+            details = response.text
+            try:
+                error_payload = response.json()
+                details = error_payload.get('error', {}).get('message') or response.text
+            except Exception:
+                pass
+
+            if response.status_code == 401:
+                return Response({
+                    'error': 'AI provider authentication failed. Please verify OPENROUTER_API_KEY.',
+                    'details': details,
+                    'success': False
+                }, status=status.HTTP_502_BAD_GATEWAY)
+
+            if response.status_code == 429:
+                return Response({
+                    'error': 'AI provider rate limit exceeded. Please try again later.',
+                    'details': details,
+                    'success': False
+                }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
             return Response({
                 'error': f'AI API error: {response.status_code}',
-                'details': response.text,
+                'details': details,
                 'success': False
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            }, status=status.HTTP_502_BAD_GATEWAY)
             
     except requests.exceptions.Timeout:
         return Response({
