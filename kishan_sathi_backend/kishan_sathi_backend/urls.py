@@ -19,6 +19,8 @@ urlpatterns = [
 ]
 
 # Serve media files in development
-if settings.DEBUG:
+if settings.DEBUG and getattr(settings, 'SERVE_LOCAL_MEDIA', True):
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
