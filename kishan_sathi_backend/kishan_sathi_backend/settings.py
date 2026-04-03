@@ -109,6 +109,20 @@ CHANNEL_LAYERS = {
     }
 }
 
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'neondb',
+        'USER': 'neondb_owner',
+        'PASSWORD': 'npg_7waMHO6SIoWk',
+        'HOST': 'ep-sparkling-pine-an66lupo.c-6.us-east-1.aws.neon.tech',
+        'PORT': '5432',
+        'OPTIONS': {
+            'sslmode': 'require',
+        },
+    }
+}
+
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
@@ -142,27 +156,27 @@ CHANNEL_LAYERS = {
 
 # }
 
-DATABASE_URL = config('DATABASE_URL', default='').strip()
+# DATABASE_URL = config('DATABASE_URL', default='').strip()
 
-if DATABASE_URL:
-    parsed_db_url = urlparse(DATABASE_URL)
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': parsed_db_url.path.lstrip('/'),
-            'USER': unquote(parsed_db_url.username or ''),
-            'PASSWORD': unquote(parsed_db_url.password or ''),
-            'HOST': parsed_db_url.hostname or '',
-            'PORT': str(parsed_db_url.port or ''),
-        }
-    }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+# if DATABASE_URL:
+#     parsed_db_url = urlparse(DATABASE_URL)
+#     DATABASES = {
+#         'default': {
+#             'ENGINE': 'django.db.backends.postgresql',
+#             'NAME': parsed_db_url.path.lstrip('/'),
+#             'USER': unquote(parsed_db_url.username or ''),
+#             'PASSWORD': unquote(parsed_db_url.password or ''),
+#             'HOST': parsed_db_url.hostname or '',
+#             'PORT': str(parsed_db_url.port or ''),
+#         }
+#     }
+# else:
+#     DATABASES = {
+#         'default': {
+#             'ENGINE': 'django.db.backends.sqlite3',
+#             'NAME': BASE_DIR / 'db.sqlite3',
+#         }
+#     }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
