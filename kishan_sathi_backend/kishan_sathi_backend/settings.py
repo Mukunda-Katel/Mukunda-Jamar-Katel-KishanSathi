@@ -64,6 +64,22 @@ THIRD_PARTY_APPS = [
 
 INSTALLED_APPS += THIRD_PARTY_APPS
 
+# Cloudinary apps are added only when credentials are configured.
+CLOUDINARY_CLOUD_NAME = config('CLOUDINARY_CLOUD_NAME', default='').strip()
+CLOUDINARY_API_KEY = config('CLOUDINARY_API_KEY', default='').strip()
+CLOUDINARY_API_SECRET = config('CLOUDINARY_API_SECRET', default='').strip()
+USE_CLOUDINARY_STORAGE = all([
+    CLOUDINARY_CLOUD_NAME,
+    CLOUDINARY_API_KEY,
+    CLOUDINARY_API_SECRET,
+])
+
+if USE_CLOUDINARY_STORAGE:
+    INSTALLED_APPS += [
+        'cloudinary_storage',
+        'cloudinary',
+    ]
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',  # Must be before CommonMiddleware
@@ -216,8 +232,28 @@ STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Media files (User uploads)
+# Uses Cloudinary in environments where Cloudinary credentials are provided.
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+SERVE_LOCAL_MEDIA = True
+
+if USE_CLOUDINARY_STORAGE:
+    CLOUDINARY_STORAGE = {
+        'CLOUD_NAME': CLOUDINARY_CLOUD_NAME,
+        'API_KEY': CLOUDINARY_API_KEY,
+        'API_SECRET': CLOUDINARY_API_SECRET,
+    }
+
+    STORAGES = {
+        'default': {
+            'BACKEND': 'cloudinary_storage.storage.MediaCloudinaryStorage',
+        },
+        'staticfiles': {
+            'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+        },
+    }
+    MEDIA_URL = f'https://res.cloudinary.com/{CLOUDINARY_CLOUD_NAME}/'
+    SERVE_LOCAL_MEDIA = False
 
 # ADD: File upload settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  
