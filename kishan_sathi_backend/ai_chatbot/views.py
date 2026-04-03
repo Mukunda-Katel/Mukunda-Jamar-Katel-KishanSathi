@@ -9,6 +9,25 @@ from .models import ChatMessage
 from .serializers import ChatMessageSerializer
 
 
+def _extract_provider_error_details(response):
+    """Return the most helpful upstream error detail available."""
+    try:
+        payload = response.json()
+        error_obj = payload.get('error', {}) if isinstance(payload, dict) else {}
+        metadata = error_obj.get('metadata', {}) if isinstance(error_obj, dict) else {}
+        raw_message = metadata.get('raw') if isinstance(metadata, dict) else None
+        if raw_message:
+            return str(raw_message)
+
+        message = error_obj.get('message') if isinstance(error_obj, dict) else None
+        if message:
+            return str(message)
+
+        return str(payload)
+    except Exception:
+        return response.text
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def chat_with_ai(request):
@@ -76,50 +95,65 @@ You can respond in English or Nepali based on the user's language.
                 'content': message
             }]
         
-        # Call OpenRouter API
-        response = requests.post(
-            url="https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-                "HTTP-Referer": "https://kisansathi.app",
-                "X-Title": "Kishan Sathi",
-            },
-            data=json.dumps({
-                "model": "google/gemma-3-4b-it:free",
-                "messages": messages,
-                "temperature": 0.7,
-                "max_tokens": 1000,
-            }),
-            timeout=30
-        )
-        
-        if response.status_code == 200:
-            data = response.json()
-            ai_response = data['choices'][0]['message']['content']
-            
-            # Save chat message to database
-            try:
-                ChatMessage.objects.create(
-                    user=request.user,
-                    message=message,
-                    response=ai_response
-                )
-            except Exception as save_error:
-                print(f"Error saving chat message: {save_error}")
-                # Continue even if save fails
-            
-            return Response({
-                'response': ai_response,
-                'success': True
-            }, status=status.HTTP_200_OK)
-        else:
-            details = response.text
-            try:
-                error_payload = response.json()
-                details = error_payload.get('error', {}).get('message') or response.text
-            except Exception:
-                pass
+        primary_model = config('OPENROUTER_MODEL', default='google/gemma-3-4b-it:free').strip()
+        fallback_models_raw = config('OPENROUTER_FALLBACK_MODELS', default='').strip()
+        fallback_models = [
+            model_name.strip() for model_name in fallback_models_raw.split(',') if model_name.strip()
+        ]
+
+        model_candidates = [primary_model]
+        for fallback_model in fallback_models:
+            if fallback_model not in model_candidates:
+                model_candidates.append(fallback_model)
+
+        last_rate_limit_details = None
+        rate_limited_models = []
+
+        for selected_model in model_candidates:
+            response = requests.post(
+                url="https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://kisansathi.app",
+                    "X-Title": "Kishan Sathi",
+                },
+                data=json.dumps({
+                    "model": selected_model,
+                    "messages": messages,
+                    "temperature": 0.7,
+                    "max_tokens": 1000,
+                }),
+                timeout=30
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                ai_response = data['choices'][0]['message']['content']
+
+                # Save chat message to database
+                try:
+                    ChatMessage.objects.create(
+                        user=request.user,
+                        message=message,
+                        response=ai_response
+                    )
+                except Exception as save_error:
+                    print(f"Error saving chat message: {save_error}")
+                    # Continue even if save fails
+
+                return Response({
+                    'response': ai_response,
+                    'model_used': selected_model,
+                    'success': True
+                }, status=status.HTTP_200_OK)
+
+            details = _extract_provider_error_details(response)
+
+            if response.status_code == 429:
+                last_rate_limit_details = details
+                rate_limited_models.append(selected_model)
+                continue
 
             if response.status_code == 401:
                 return Response({
@@ -128,18 +162,26 @@ You can respond in English or Nepali based on the user's language.
                     'success': False
                 }, status=status.HTTP_502_BAD_GATEWAY)
 
-            if response.status_code == 429:
-                return Response({
-                    'error': 'AI provider rate limit exceeded. Please try again later.',
-                    'details': details,
-                    'success': False
-                }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-
             return Response({
                 'error': f'AI API error: {response.status_code}',
                 'details': details,
+                'model_used': selected_model,
                 'success': False
             }, status=status.HTTP_502_BAD_GATEWAY)
+
+        if rate_limited_models:
+            return Response({
+                'error': 'AI provider rate limit exceeded. Please retry shortly.',
+                'details': last_rate_limit_details,
+                'rate_limited_models': rate_limited_models,
+                'retry_after_seconds': 60,
+                'success': False
+            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+        return Response({
+            'error': 'AI service unavailable. No response from provider.',
+            'success': False
+        }, status=status.HTTP_502_BAD_GATEWAY)
             
     except requests.exceptions.Timeout:
         return Response({

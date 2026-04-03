@@ -164,20 +164,29 @@ def profile_view(request):
         serializer = UserSerializer(request.user, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    serializer = UserSerializer(
-        request.user,
-        data=request.data,
-        partial=True,
-        context={'request': request},
-    )
-    if serializer.is_valid():
-        serializer.save()
+    try:
+        serializer = UserSerializer(
+            request.user,
+            data=request.data,
+            partial=True,
+            context={'request': request},
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {
+                    'message': 'Profile updated successfully.',
+                    'user': serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
         return Response(
             {
-                'message': 'Profile updated successfully.',
-                'user': serializer.data,
+                'error': 'Failed to update profile image. Please verify media storage configuration.',
+                'details': str(e),
             },
-            status=status.HTTP_200_OK,
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
-
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

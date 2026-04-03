@@ -3,6 +3,27 @@ from .models import Post, Vote, Comment
 from Users.models import User
 
 
+def _file_exists(field_file):
+    if not field_file:
+        return False
+    name = getattr(field_file, 'name', None)
+    storage = getattr(field_file, 'storage', None)
+    if not name or storage is None:
+        return False
+    try:
+        return storage.exists(name)
+    except Exception:
+        return False
+
+
+def _build_file_url(serializer, field_file):
+    url = field_file.url
+    request = serializer.context.get('request')
+    if request and not (url.startswith('http://') or url.startswith('https://')):
+        return request.build_absolute_uri(url)
+    return url
+
+
 class AuthorSerializer(serializers.ModelSerializer):
     """Serializer for post author information"""
     profile_picture_url = serializers.SerializerMethodField()
@@ -12,11 +33,8 @@ class AuthorSerializer(serializers.ModelSerializer):
         fields = ['id', 'full_name', 'email', 'role', 'profile_picture_url']
 
     def get_profile_picture_url(self, obj):
-        if obj.profile_picture:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.profile_picture.url)
-            return obj.profile_picture.url
+        if obj.profile_picture and _file_exists(obj.profile_picture):
+            return _build_file_url(self, obj.profile_picture)
         return None
 
 
@@ -88,12 +106,8 @@ class PostSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         """Convert image to full URL in response"""
         representation = super().to_representation(instance)
-        if instance.image:
-            request = self.context.get('request')
-            if request:
-                representation['image'] = request.build_absolute_uri(instance.image.url)
-            else:
-                representation['image'] = instance.image.url
+        if instance.image and _file_exists(instance.image):
+            representation['image'] = _build_file_url(self, instance.image)
         else:
             representation['image'] = None
         return representation

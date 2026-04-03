@@ -3,6 +3,27 @@ from .models import Category, Product, ProductImage
 from Users.models import User
 
 
+def _file_exists(field_file):
+    if not field_file:
+        return False
+    name = getattr(field_file, 'name', None)
+    storage = getattr(field_file, 'storage', None)
+    if not name or storage is None:
+        return False
+    try:
+        return storage.exists(name)
+    except Exception:
+        return False
+
+
+def _build_file_url(serializer, field_file):
+    url = field_file.url
+    request = serializer.context.get('request')
+    if request and not (url.startswith('http://') or url.startswith('https://')):
+        return request.build_absolute_uri(url)
+    return url
+
+
 class CategorySerializer(serializers.ModelSerializer):
     product_count = serializers.IntegerField(source='products.count', read_only=True)
     
@@ -13,10 +34,17 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
     class Meta:
         model = ProductImage
         fields = ['id', 'image', 'caption', 'uploaded_at']
         read_only_fields = ['uploaded_at']
+
+    def get_image(self, obj):
+        if obj.image and _file_exists(obj.image):
+            return _build_file_url(self, obj.image)
+        return None
 
 
 class FarmerBasicSerializer(serializers.ModelSerializer):
@@ -39,6 +67,14 @@ class ProductListSerializer(serializers.ModelSerializer):
             'status', 'status_display', 'is_organic', 'location', 'district',
             'image', 'category_name', 'farmer_name', 'farmer_id', 'created_at', 'is_available'
         ]
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        if instance.image and _file_exists(instance.image):
+            representation['image'] = _build_file_url(self, instance.image)
+        else:
+            representation['image'] = None
+        return representation
 
 
 class ProductDetailSerializer(serializers.ModelSerializer):
@@ -64,6 +100,14 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at', 'is_available'
         ]
         read_only_fields = ['farmer', 'views_count', 'created_at', 'updated_at']
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        if instance.image and _file_exists(instance.image):
+            representation['image'] = _build_file_url(self, instance.image)
+        else:
+            representation['image'] = None
+        return representation
     
     def create(self, validated_data):
         # Set farmer from request user

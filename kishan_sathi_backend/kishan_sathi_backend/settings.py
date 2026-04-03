@@ -242,6 +242,8 @@ if USE_CLOUDINARY_STORAGE:
         'CLOUD_NAME': CLOUDINARY_CLOUD_NAME,
         'API_KEY': CLOUDINARY_API_KEY,
         'API_SECRET': CLOUDINARY_API_SECRET,
+        # Keep public IDs clean (e.g. products/file.jpg) instead of prefixing MEDIA_URL.
+        'PREFIX': '',
     }
 
     STORAGES = {
@@ -252,7 +254,6 @@ if USE_CLOUDINARY_STORAGE:
             'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
         },
     }
-    MEDIA_URL = f'https://res.cloudinary.com/{CLOUDINARY_CLOUD_NAME}/'
     SERVE_LOCAL_MEDIA = False
 
 # ADD: File upload settings

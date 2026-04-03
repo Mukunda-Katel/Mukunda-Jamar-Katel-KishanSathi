@@ -2,6 +2,27 @@ from rest_framework import serializers
 from .models import User
 
 
+def _file_exists(field_file):
+    if not field_file:
+        return False
+    name = getattr(field_file, 'name', None)
+    storage = getattr(field_file, 'storage', None)
+    if not name or storage is None:
+        return False
+    try:
+        return storage.exists(name)
+    except Exception:
+        return False
+
+
+def _build_file_url(serializer, field_file):
+    url = field_file.url
+    request = serializer.context.get('request')
+    if request and not (url.startswith('http://') or url.startswith('https://')):
+        return request.build_absolute_uri(url)
+    return url
+
+
 class UserSerializer(serializers.ModelSerializer):
     role_display = serializers.CharField(source='get_role_display', read_only=True)
     doctor_status_display = serializers.CharField(
@@ -47,18 +68,12 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_certificate_url(self, obj):
         """Return full URL for certificate file"""
-        if obj.certificate:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.certificate.url)
-            return obj.certificate.url
+        if obj.certificate and _file_exists(obj.certificate):
+            return _build_file_url(self, obj.certificate)
         return None
 
     def get_profile_picture_url(self, obj):
         """Return full URL for profile picture file"""
-        if obj.profile_picture:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.profile_picture.url)
-            return obj.profile_picture.url
+        if obj.profile_picture and _file_exists(obj.profile_picture):
+            return _build_file_url(self, obj.profile_picture)
         return None
