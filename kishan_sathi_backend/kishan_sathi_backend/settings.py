@@ -5,6 +5,10 @@ Django settings for kishan_sathi_backend project.
 from pathlib import Path
 from decouple import config, Csv
 from urllib.parse import urlparse, unquote
+from django.contrib.auth import get_user_model
+import os
+
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -339,3 +343,17 @@ FIREBASE_SERVICE_ACCOUNT_KEY = config(
 )
 
 
+
+# For admin account as the vercel shell is not freee 
+def create_superuser():
+    User = get_user_model()
+    username = os.environ.get("DJANGO_SUPERUSER_USERNAME")
+    email = os.environ.get("DJANGO_SUPERUSER_EMAIL")
+    password = os.environ.get("DJANGO_SUPERUSER_PASSWORD")
+
+    if username and email and password:
+        if not User.objects.filter(username=username).exists():
+            User.objects.create_superuser(username, email, password)
+            print("Superuser created")
+
+create_superuser()
