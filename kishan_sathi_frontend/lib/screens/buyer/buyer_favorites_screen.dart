@@ -20,7 +20,13 @@ class BuyerFavoritesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final horizontalPadding = screenWidth < 600 ? 16.0 : 20.0;
+    final isTinyScreen = screenWidth < 360;
+    final isSmallScreen = screenWidth < 600;
+    final horizontalPadding = isTinyScreen ? 12.0 : (isSmallScreen ? 16.0 : 20.0);
+    final headerTitleSize = isTinyScreen ? 20.0 : (isSmallScreen ? 22.0 : 24.0);
+    final sectionTitleSize = isTinyScreen ? 17.0 : 20.0;
+    final emptyIconSize = isTinyScreen ? 56.0 : 72.0;
+    final emptyTitleSize = isTinyScreen ? 17.0 : 20.0;
     final gridCrossAxisCount = screenWidth >= 1200
         ? 4
         : screenWidth >= 900
@@ -59,9 +65,9 @@ class BuyerFavoritesScreen extends StatelessWidget {
                   children: [
                     Text(
                       AppLocalizations.of(context)!.favorites,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
-                        fontSize: 24,
+                        fontSize: headerTitleSize,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -86,12 +92,12 @@ class BuyerFavoritesScreen extends StatelessWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.favorite_border, size: 72, color: Colors.grey[400]),
+                        Icon(Icons.favorite_border, size: emptyIconSize, color: Colors.grey[400]),
                         const SizedBox(height: 16),
                         Text(
                           'No favorites yet',
                           style: TextStyle(
-                            fontSize: 20,
+                            fontSize: emptyTitleSize,
                             color: Colors.grey[700],
                             fontWeight: FontWeight.bold,
                           ),
@@ -114,10 +120,10 @@ class BuyerFavoritesScreen extends StatelessWidget {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(horizontalPadding, 20, horizontalPadding, 10),
-                  child: const Text(
+                  child: Text(
                     'Your Favorites',
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: sectionTitleSize,
                       fontWeight: FontWeight.bold,
                       color: AppTheme.darkGreen,
                     ),
@@ -161,10 +167,10 @@ class BuyerFavoritesScreen extends StatelessWidget {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(horizontalPadding, 24, horizontalPadding, 10),
-                  child: const Text(
+                  child: Text(
                     'Similar Category Products',
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: sectionTitleSize,
                       fontWeight: FontWeight.bold,
                       color: AppTheme.darkGreen,
                     ),
