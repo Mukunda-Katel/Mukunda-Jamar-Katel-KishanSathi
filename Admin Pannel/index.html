@@ -1,0 +1,462 @@
+<!DOCTYPE html> <html lang="en"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Kishan Sathi - Admin Panel</title> <link rel="stylesheet" href="theme-black.css"> <style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: #f5f7fa;
+    }
+
+    /* Header */
+    .header {
+        background: #417690;
+        color: white;
+        padding: 18px 30px;
+        font-size: 24px;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+    }
+
+    .header-right {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        font-size: 14px;
+    }
+
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: white;
+        color: #417690;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 16px;
+    }
+
+    /* Sidebar */
+    .sidebar {
+        width: 260px;
+        height: 100vh;
+        background: white;
+        position: fixed;
+        top: 0;
+        left: 0;
+        padding-top: 75px;
+        border-right: 1px solid #e0e0e0;
+        box-shadow: 2px 0 8px rgba(0,0,0,0.05);
+        overflow-y: auto;
+    }
+
+    .sidebar a {
+        display: flex;
+        align-items: center;
+        padding: 16px 24px;
+        color: #447e9b;
+        text-decoration: none;
+        font-size: 15px;
+        transition: all 0.3s ease;
+        border-left: 3px solid transparent;
+        gap: 12px;
+    }
+
+    .sidebar a:hover {
+        background: #f0f7fa;
+        border-left-color: #447e9b;
+        padding-left: 28px;
+    }
+
+    .sidebar a.active {
+        background: #e8f4f8;
+        border-left-color: #417690;
+        color: #417690;
+        font-weight: 600;
+    }
+
+    .sidebar-icon {
+        width: 20px;
+        height: 20px;
+        display: inline-block;
+    }
+
+    /* Main content */
+    .main {
+        margin-left: 260px;
+        margin-top: 75px;
+        padding: 30px;
+        min-height: calc(100vh - 75px);
+    }
+
+    .page-title {
+        font-size: 28px;
+        color: #2c3e50;
+        margin-bottom: 10px;
+        font-weight: 600;
+    }
+
+    .page-subtitle {
+        color: #7f8c8d;
+        margin-bottom: 30px;
+        font-size: 15px;
+    }
+
+    /* Cards */
+    .card-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 24px;
+        margin-bottom: 40px;
+    }
+
+    .card {
+        background: white;
+        padding: 24px;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        cursor: pointer;
+        border: 1px solid #f0f0f0;
+    }
+
+    .card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    }
+
+    .card-header {
+        color: #7f8c8d;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 12px;
+        font-weight: 500;
+    }
+
+    .card-value {
+        font-size: 36px;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 8px;
+    }
+
+    .card-footer {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: #95a5a6;
+        margin-top: 12px;
+    }
+
+    .trend {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-weight: 600;
+    }
+
+    .trend.up {
+        color: #28a745;
+    }
+
+    .trend.down {
+        color: #dc3545;
+    }
+
+    /* Badges */
+    .badge {
+        display: inline-block;
+        padding: 6px 14px;
+        color: white;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .success { background: #28a745; }
+    .danger { background: #dc3545; }
+    .warning { background: #ffc107; color: #000; }
+    .info { background: #447e9b; }
+
+    /* Activity Section */
+    .activity-section {
+        background: white;
+        padding: 24px;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        margin-top: 24px;
+    }
+
+    .section-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+
+    .activity-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .activity-item {
+        padding: 16px 0;
+        border-bottom: 1px solid #f5f5f5;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+
+    .activity-text {
+        color: #34495e;
+        font-size: 14px;
+    }
+
+    .activity-time {
+        color: #95a5a6;
+        font-size: 13px;
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border-radius: 6px;
+        border: none;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-primary {
+        background: #417690;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #356072;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(65, 118, 144, 0.3);
+    }
+
+    .btn-outline {
+        background: white;
+        color: #447e9b;
+        border: 2px solid #447e9b;
+    }
+
+    .btn-outline:hover {
+        background: #447e9b;
+        color: white;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+        .sidebar {
+            transform: translateX(-100%);
+        }
+
+        .main {
+            margin-left: 0;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .sidebar {
+            transform: translateX(-100%);
+        }
+
+        .main {
+            margin-left: 0;
+            padding: 20px 16px;
+        }
+
+        .header {
+            padding: 12px 16px;
+            font-size: 18px;
+        }
+
+        .card-container {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .quick-actions {
+            flex-direction: column;
+        }
+
+        .quick-actions .btn {
+            width: 100%;
+            text-align: center;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .main {
+            padding: 14px 10px;
+            margin-top: 60px;
+        }
+
+        .header {
+            padding: 10px 12px;
+            font-size: 16px;
+        }
+
+        .card-container {
+            grid-template-columns: 1fr;
+        }
+
+        .card-value {
+            font-size: 28px;
+        }
+    }
+
+</style> </head> <body> <!-- Header --> <div class="header"> <div>Kishan Sathi-Admin Panel</div> <div class="header-right"> <span> Dashboard</span> <div class="user-info"> <div class="avatar">A</div> <span>Admin</span> </div> </div> </div> <!-- Sidebar --> <div class="sidebar"> <a href="index.html" class="active"> <span class="sidebar-icon"></span>
+        Dashboard
+    </a> <a href="manageuser.html"> <span class="sidebar-icon"></span>
+        Manage Users
+    </a> <a href="verifydoctor.html"> <span class="sidebar-icon"></span>
+        Verify Doctors
+    </a> <a href="products.html"> <span class="sidebar-icon"></span>
+        Products
+    </a> <a href="posts.html"> <span class="sidebar-icon"></span>
+        Posts
+    </a> <a href="#"> <span class="sidebar-icon"></span>
+        Reports
+    </a> <a href="#"> <span class="sidebar-icon"></span>
+        Seasonal Farming
+    </a> <a href="#"> <span class="sidebar-icon"></span>
+        Plant Diseases
+    </a> <a href="#"> <span class="sidebar-icon"></span>
+        Notifications
+    </a> <a href="#"> <span class="sidebar-icon"></span>
+        Settings
+    </a> </div> <!-- Main content --> <div class="main"> <h1 class="page-title">Dashboard Overview</h1> <p class="page-subtitle">Welcome back! Here's what's happening with Kishan Sathi today.</p> <div class="quick-actions"> <button class="btn btn-primary">+ Add New User</button> <button class="btn btn-outline">Verify Pending Doctors</button> <button class="btn btn-outline">View All Reports</button> </div> <div class="card-container"> <div class="card" id="total-users"> <div class="card-header">Total Users</div> <div class="card-value">Loading...</div> <div class="card-footer"> <span class="trend up">↑ 0%</span> <span>vs last month</span> </div> </div> <div class="card" id="total-farmers"> <div class="card-header">Farmers</div> <div class="card-value">Loading...</div> <div class="card-footer"> <span class="badge success">Active</span> </div> </div> <div class="card" id="total-buyers"> <div class="card-header">Buyers</div> <div class="card-value">Loading...</div> <div class="card-footer"> <span class="badge success">Active</span> </div> </div> <div class="card" id="pending-doctors"> <div class="card-header">Doctors Pending</div> <div class="card-value">Loading...</div> <div class="card-footer"> <span class="badge warning">Needs Review</span> </div> </div> <div class="card" id="total-products"> <div class="card-header">Total Products</div> <div class="card-value">Loading...</div> <div class="card-footer"> <span class="trend up">↑ 0%</span> <span>this month</span> </div> </div> </div> <!-- Recent Activity Section --> <div class="activity-section"> <h2 class="section-title">Recent Activity</h2> <ul class="activity-list"> <li class="activity-item"> <div class="activity-text"> <strong>New farmer registration:</strong> Ramesh Kumar joined the platform
+                </div> <div class="activity-time">5 minutes ago</div> </li> <li class="activity-item"> <div class="activity-text"> <strong>Doctor verified:</strong> Dr. Priya Sharma's credentials approved
+                </div> <div class="activity-time">23 minutes ago</div> </li> <li class="activity-item"> <div class="activity-text"> <strong>New product listed:</strong> Organic Wheat - 50kg bags available
+                </div> <div class="activity-time">1 hour ago</div> </li> <li class="activity-item"> <div class="activity-text"> <strong>Report resolved:</strong> Buyer complaint #1234 marked as resolved
+                </div> <div class="activity-time">2 hours ago</div> </li> <li class="activity-item"> <div class="activity-text"> <strong>Disease alert:</strong> New pest outbreak reported in Punjab region
+                </div> <div class="activity-time">3 hours ago</div> </li> </ul> </div> </div> <script src="js/api.js"></script> <script>
+    // Check authentication
+    checkAuth();
+
+    // Load dashboard data
+    async function loadDashboardStats() {
+        try {
+            const stats = await apiCall(API_CONFIG.ENDPOINTS.ADMIN.STATS);
+            
+            // Update dashboard cards
+            updateCard('total-users', stats.total_users, stats.recent_users_growth);
+            updateCard('total-farmers', stats.total_farmers);
+            updateCard('total-buyers', stats.total_buyers);
+            updateCard('pending-doctors', stats.pending_doctors);
+            updateCard('total-products', stats.total_products, stats.recent_products_growth);
+            
+        } catch (error) {
+            console.error('Failed to load dashboard stats:', error);
+            showError('Failed to load dashboard statistics');
+        }
+    }
+
+    function updateCard(cardId, value, growth = null) {
+        const cardElement = document.getElementById(cardId);
+        if (cardElement) {
+            const valueElement = cardElement.querySelector('.card-value');
+            if (valueElement) {
+                valueElement.textContent = value.toLocaleString();
+            }
+            
+            if (growth !== null) {
+                const trendElement = cardElement.querySelector('.trend');
+                if (trendElement) {
+                    const isPositive = growth >= 0;
+                    trendElement.className = `trend ${isPositive ? 'up' : 'down'}`;
+                    trendElement.innerHTML = `${isPositive ? '↑' : '↓'} ${Math.abs(growth).toFixed(1)}%`;
+                }
+            }
+        }
+    }
+
+    // Load recent activity
+    async function loadRecentActivity() {
+        try {
+            const activities = await apiCall(API_CONFIG.ENDPOINTS.ADMIN.ACTIVITY);
+            
+            const activityList = document.querySelector('.activity-list');
+            if (activityList && activities.length > 0) {
+                activityList.innerHTML = activities.map(activity => `
+                    <li class="activity-item"> <div class="activity-text">${activity.message}</div> <div class="activity-time">${formatDate(activity.timestamp)}</div> </li>
+                `).join('');
+            }
+        } catch (error) {
+            console.error('Failed to load recent activity:', error);
+        }
+    }
+
+    // Load user info
+    function loadUserInfo() {
+        const userData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+        if (userData) {
+            const user = JSON.parse(userData);
+            const avatar = document.querySelector('.avatar');
+            const userName = document.querySelector('.user-info span:last-child');
+            
+            if (avatar && user.full_name) {
+                avatar.textContent = user.full_name.charAt(0).toUpperCase();
+            }
+            if (userName) {
+                userName.textContent = user.full_name;
+            }
+        }
+    }
+
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', () => {
+        loadUserInfo();
+        loadDashboardStats();
+        loadRecentActivity();
+        
+        // Refresh data every 30 seconds
+        setInterval(() => {
+            loadDashboardStats();
+            loadRecentActivity();
+        }, 30000);
+    });
+</script> </body> </html>
+
+
