@@ -1,3 +1,4 @@
+import logging
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -6,6 +7,10 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.db.models import Q, Max
 from .models import ChatRoom, Message
 from .serializers import ChatRoomSerializer, ChatRoomListSerializer, MessageSerializer
+from kishan_sathi_backend.fcm_utils import send_new_message_notification
+
+
+logger = logging.getLogger(__name__)
 
 
 class ChatRoomViewSet(viewsets.ModelViewSet):
@@ -150,8 +155,27 @@ class MessageViewSet(viewsets.ModelViewSet):
             )
         
         message = serializer.save(sender=request.user)
+        self._send_chat_push_notifications(chat_room=chat_room, sender=request.user)
         
         return Response(
             MessageSerializer(message, context={'request': request}).data,
             status=status.HTTP_201_CREATED
         )
+
+    def _send_chat_push_notifications(self, *, chat_room, sender):
+        """Send push notification to other room participants when a message arrives."""
+        recipients = chat_room.participants.exclude(id=sender.id)
+
+        for recipient in recipients:
+            try:
+                send_new_message_notification(
+                    recipient=recipient,
+                    sender_name=sender.full_name,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Failed to send chat push to user_id=%s in room_id=%s: %s",
+                    recipient.id,
+                    chat_room.id,
+                    exc,
+                )

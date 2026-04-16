@@ -1,10 +1,13 @@
 import json
+import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
 from .models import ChatRoom, Message
+from kishan_sathi_backend.fcm_utils import send_new_message_notification
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -164,6 +167,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
             sender=self.user,
             content=content
         )
+
+        recipients = chat_room.participants.exclude(id=self.user.id)
+        for recipient in recipients:
+            try:
+                send_new_message_notification(
+                    recipient=recipient,
+                    sender_name=self.user.full_name,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Failed to send chat push to user_id=%s in room_id=%s: %s",
+                    recipient.id,
+                    chat_room.id,
+                    exc,
+                )
+
         return message
     
     @database_sync_to_async
