@@ -1,6 +1,7 @@
+import '../constants/api_constants.dart';
+
 class AppConfig {
-  // For Android Emulator (10.0.2.2 maps to localhost)
-  static const String baseUrl = 'http://10.0.2.2:8000';
+  static const String baseUrl = ApiConstants.serverBaseUrl;
   
   // API Endpoints
   static const String loginEndpoint = '/api/auth/login/';
@@ -8,8 +9,7 @@ class AppConfig {
   static const String doctorRegisterEndpoint = '/api/auth/register/doctor/';
   static const String logoutEndpoint = '/api/auth/logout/';
   
-  // NEW: Add timeout duration
-  static const Duration timeout = Duration(seconds: 30);
+  static const Duration timeout = ApiConstants.timeout;
   
   // Get full URL
   static String getUrl(String endpoint) {

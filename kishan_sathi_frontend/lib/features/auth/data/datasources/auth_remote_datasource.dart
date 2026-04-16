@@ -221,6 +221,42 @@ class ApiService {
     }
   }
 
+  /// Get currently authenticated user profile
+  Future<Map<String, dynamic>> getProfile({
+    required String token,
+  }) async {
+    try {
+      final url = Uri.parse(AppConfig.getUrl('/api/auth/profile/'));
+
+      final response = await _client
+          .get(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Token $token',
+            },
+          )
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+
+      if (response.statusCode == 401) {
+        throw Exception('Session expired. Please login again.');
+      }
+
+      throw Exception('Failed to fetch profile: ${response.body}');
+    } on SocketException {
+      throw Exception('Network error. Please check your internet connection.');
+    } on TimeoutException {
+      throw Exception('Request timeout. Please try again.');
+    } catch (e) {
+      print('Get Profile Error: $e');
+      rethrow;
+    }
+  }
+
   void dispose() {
     _client.close();
   }

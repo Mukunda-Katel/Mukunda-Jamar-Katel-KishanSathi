@@ -1,6 +1,18 @@
 class ApiConstants {
-  // Base URL
-  static const String baseUrl = 'http://10.0.2.2:8000/api';
+  // Root server URLs (without /api)
+  // Android emulator cannot reach host localhost directly.
+  // Use 10.0.2.2 for Android emulator local backend access.
+  // For iOS simulator use localhost, and for physical device use your PC LAN IP.
+  static const String localServerBaseUrl = 'http://10.0.2.2:8000';
+  // static const String productionServerBaseUrl =
+  //     'https://mukunda-jamar-katel-kishansathi.onrender.com';
+
+  // Single source of truth for base URLs.
+  static const String serverBaseUrl = localServerBaseUrl;
+  static const String apiBaseUrl = '$serverBaseUrl/api';
+
+  // Backward-compatible alias used by existing services.
+  static const String baseUrl = apiBaseUrl;
   
   // Auth Endpoints
   static const String loginEndpoint = '/auth/login/';

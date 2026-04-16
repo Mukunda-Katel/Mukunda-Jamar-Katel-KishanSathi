@@ -70,23 +70,25 @@ class _FarmerConsultationScreenState extends State<FarmerConsultationScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Request Consultation with ${doctor.fullName}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('${doctor.specialization ?? "Doctor"}'),
-            const SizedBox(height: 8),
-            Text('${doctor.experienceYears ?? 0} years of experience'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: messageController,
-              decoration: const InputDecoration(
-                labelText: 'Message (Optional)',
-                hintText: 'Describe your concern...',
-                border: OutlineInputBorder(),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('${doctor.specialization ?? "Doctor"}'),
+              const SizedBox(height: 8),
+              Text('${doctor.experienceYears ?? 0} years of experience'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: messageController,
+                decoration: const InputDecoration(
+                  labelText: 'Message (Optional)',
+                  hintText: 'Describe your concern...',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
               ),
-              maxLines: 3,
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -136,20 +138,34 @@ class _FarmerConsultationScreenState extends State<FarmerConsultationScreen>
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTinyScreen = screenWidth < 360;
+    final isSmallScreen = screenWidth < 600;
+
+    final titleFontSize = isTinyScreen ? 16.0 : 18.0;
+    final tabFontSize = isTinyScreen ? 12.0 : 14.0;
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Veterinary Consultation',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: titleFontSize,
+          ),
         ),
         backgroundColor: AppTheme.primaryGreen,
         elevation: 0,
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: isSmallScreen,
           indicatorColor: Colors.white,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
+          labelStyle: TextStyle(fontSize: tabFontSize, fontWeight: FontWeight.w600),
+          unselectedLabelStyle: TextStyle(fontSize: tabFontSize),
           tabs: const [
             Tab(text: 'Available Doctors'),
             Tab(text: 'My Requests'),
@@ -161,24 +177,33 @@ class _FarmerConsultationScreenState extends State<FarmerConsultationScreen>
           : TabBarView(
               controller: _tabController,
               children: [
-                _buildDoctorsList(),
-                _buildRequestsList(),
+                _buildDoctorsList(isTinyScreen: isTinyScreen),
+                _buildRequestsList(isTinyScreen: isTinyScreen),
               ],
             ),
     );
   }
 
-  Widget _buildDoctorsList() {
+  Widget _buildDoctorsList({required bool isTinyScreen}) {
+    final listPadding = isTinyScreen ? 12.0 : 16.0;
+    final cardPadding = isTinyScreen ? 12.0 : 16.0;
+    final avatarRadius = isTinyScreen ? 24.0 : 30.0;
+    final doctorNameSize = isTinyScreen ? 16.0 : 18.0;
+    final subtitleSize = isTinyScreen ? 13.0 : 14.0;
+    final detailTextSize = isTinyScreen ? 12.0 : 14.0;
+    final buttonFontSize = isTinyScreen ? 13.0 : 14.0;
+    final infoIconSize = isTinyScreen ? 14.0 : 16.0;
+
     if (_doctors.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.medical_services, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
+            Icon(Icons.medical_services, size: isTinyScreen ? 54 : 64, color: Colors.grey[400]),
+            SizedBox(height: isTinyScreen ? 12 : 16),
             Text(
               'No doctors available',
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              style: TextStyle(fontSize: isTinyScreen ? 14 : 16, color: Colors.grey[600]),
             ),
           ],
         ),
@@ -188,7 +213,7 @@ class _FarmerConsultationScreenState extends State<FarmerConsultationScreen>
     return RefreshIndicator(
       onRefresh: _loadData,
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(listPadding),
         itemCount: _doctors.length,
         itemBuilder: (context, index) {
           final doctor = _doctors[index];
@@ -200,44 +225,44 @@ class _FarmerConsultationScreenState extends State<FarmerConsultationScreen>
             margin: const EdgeInsets.only(bottom: 12),
             elevation: 2,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(isTinyScreen ? 10 : 12),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(cardPadding),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
                       CircleAvatar(
-                        radius: 30,
+                        radius: avatarRadius,
                         backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
                         child: Text(
                           doctor.fullName[0].toUpperCase(),
                           style: TextStyle(
-                            fontSize: 24,
+                            fontSize: isTinyScreen ? 20 : 24,
                             fontWeight: FontWeight.bold,
                             color: AppTheme.primaryGreen,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      SizedBox(width: isTinyScreen ? 10 : 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               doctor.fullName,
-                              style: const TextStyle(
-                                fontSize: 18,
+                              style: TextStyle(
+                                fontSize: doctorNameSize,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            SizedBox(height: isTinyScreen ? 2 : 4),
                             Text(
                               doctor.specialization ?? 'General Veterinarian',
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: subtitleSize,
                                 color: Colors.grey[600],
                               ),
                             ),
@@ -247,22 +272,21 @@ class _FarmerConsultationScreenState extends State<FarmerConsultationScreen>
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Row(
+                  Wrap(
+                    spacing: isTinyScreen ? 10 : 16,
+                    runSpacing: 6,
                     children: [
                       Icon(Icons.work_outline,
-                          size: 16, color: Colors.grey[600]),
-                      const SizedBox(width: 4),
+                          size: infoIconSize, color: Colors.grey[600]),
                       Text(
                         '${doctor.experienceYears ?? 0} years experience',
-                        style: TextStyle(color: Colors.grey[600]),
+                        style: TextStyle(color: Colors.grey[600], fontSize: detailTextSize),
                       ),
-                      const SizedBox(width: 16),
                       if (doctor.phoneNumber != null) ...[
-                        Icon(Icons.phone, size: 16, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
+                        Icon(Icons.phone, size: infoIconSize, color: Colors.grey[600]),
                         Text(
                           doctor.phoneNumber!,
-                          style: TextStyle(color: Colors.grey[600]),
+                          style: TextStyle(color: Colors.grey[600], fontSize: detailTextSize),
                         ),
                       ],
                     ],
@@ -274,7 +298,7 @@ class _FarmerConsultationScreenState extends State<FarmerConsultationScreen>
                       onPressed: hasRequest ? null : () => _requestConsultation(doctor),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryGreen,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: EdgeInsets.symmetric(vertical: isTinyScreen ? 10 : 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -285,9 +309,10 @@ class _FarmerConsultationScreenState extends State<FarmerConsultationScreen>
                       ),
                       label: Text(
                         hasRequest ? 'Request Pending' : 'Request Consultation',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
+                          fontSize: buttonFontSize,
                         ),
                       ),
                     ),
@@ -301,17 +326,20 @@ class _FarmerConsultationScreenState extends State<FarmerConsultationScreen>
     );
   }
 
-  Widget _buildRequestsList() {
+  Widget _buildRequestsList({required bool isTinyScreen}) {
+    final listPadding = isTinyScreen ? 12.0 : 16.0;
+    final cardPadding = isTinyScreen ? 12.0 : 16.0;
+
     if (_requests.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.inbox, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
+            Icon(Icons.inbox, size: isTinyScreen ? 54 : 64, color: Colors.grey[400]),
+            SizedBox(height: isTinyScreen ? 12 : 16),
             Text(
               'No consultation requests',
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              style: TextStyle(fontSize: isTinyScreen ? 14 : 16, color: Colors.grey[600]),
             ),
           ],
         ),
@@ -321,7 +349,7 @@ class _FarmerConsultationScreenState extends State<FarmerConsultationScreen>
     return RefreshIndicator(
       onRefresh: _loadData,
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(listPadding),
         itemCount: _requests.length,
         itemBuilder: (context, index) {
           final request = _requests[index];
@@ -354,48 +382,48 @@ class _FarmerConsultationScreenState extends State<FarmerConsultationScreen>
             margin: const EdgeInsets.only(bottom: 12),
             elevation: 2,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(isTinyScreen ? 10 : 12),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(cardPadding),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
                       CircleAvatar(
-                        radius: 24,
+                        radius: isTinyScreen ? 20 : 24,
                         backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
                         child: Text(
                           doctor.fullName[0].toUpperCase(),
                           style: TextStyle(
-                            fontSize: 20,
+                            fontSize: isTinyScreen ? 16 : 20,
                             fontWeight: FontWeight.bold,
                             color: AppTheme.primaryGreen,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: isTinyScreen ? 10 : 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               doctor.fullName,
-                              style: const TextStyle(
-                                fontSize: 16,
+                              style: TextStyle(
+                                fontSize: isTinyScreen ? 15 : 16,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            SizedBox(height: isTinyScreen ? 2 : 4),
                             Row(
                               children: [
-                                Icon(statusIcon, size: 16, color: statusColor),
+                                Icon(statusIcon, size: isTinyScreen ? 14 : 16, color: statusColor),
                                 const SizedBox(width: 4),
                                 Text(
                                   request.status.toUpperCase(),
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: isTinyScreen ? 11 : 12,
                                     color: statusColor,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -417,14 +445,20 @@ class _FarmerConsultationScreenState extends State<FarmerConsultationScreen>
                       ),
                       child: Text(
                         request.message!,
-                        style: TextStyle(color: Colors.grey[700]),
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontSize: isTinyScreen ? 13 : 14,
+                        ),
                       ),
                     ),
                   ],
                   const SizedBox(height: 12),
                   Text(
                     'Requested: ${_formatDate(request.createdAt)}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: isTinyScreen ? 11 : 12,
+                      color: Colors.grey[600],
+                    ),
                   ),
                   if (request.status == 'approved' && request.chatRoomId != null) ...[
                     const SizedBox(height: 12),
@@ -445,7 +479,7 @@ class _FarmerConsultationScreenState extends State<FarmerConsultationScreen>
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primaryGreen,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: EdgeInsets.symmetric(vertical: isTinyScreen ? 10 : 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),

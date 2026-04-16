@@ -8,6 +8,14 @@ class ChatbotBloc extends Bloc<ChatbotEvent, ChatbotState> {
   final ChatbotService chatbotService;
   final List<ChatMessage> _messages = [];
 
+  String _normalizeErrorMessage(Object error) {
+    final raw = error.toString();
+    if (raw.startsWith('Exception: ')) {
+      return raw.replaceFirst('Exception: ', '').trim();
+    }
+    return raw;
+  }
+
   ChatbotBloc({required this.chatbotService}) : super(ChatbotInitial()) {
     on<SendMessage>(_onSendMessage);
     on<ClearChat>(_onClearChat);
@@ -49,7 +57,7 @@ class ChatbotBloc extends Bloc<ChatbotEvent, ChatbotState> {
 
       emit(ChatbotLoaded(List.from(_messages)));
     } catch (e) {
-      emit(ChatbotError(e.toString(), List.from(_messages)));
+      emit(ChatbotError(_normalizeErrorMessage(e), List.from(_messages)));
     }
   }
 

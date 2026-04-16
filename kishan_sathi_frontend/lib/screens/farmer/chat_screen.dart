@@ -14,12 +14,14 @@ import 'package:intl/intl.dart';
 
 class ChatScreen extends StatelessWidget {
   final String userName;
+  final String? profileImageUrl;
   final String userRole;
   final int chatRoomId;
 
   const ChatScreen({
     super.key,
     required this.userName,
+    this.profileImageUrl,
     required this.userRole,
     required this.chatRoomId,
   });
@@ -36,6 +38,7 @@ class ChatScreen extends StatelessWidget {
       )..add(LoadMessages(roomId: chatRoomId)),
       child: _ChatScreenContent(
         userName: userName,
+        profileImageUrl: profileImageUrl,
         userRole: userRole,
         chatRoomId: chatRoomId,
       ),
@@ -45,11 +48,13 @@ class ChatScreen extends StatelessWidget {
 
 class _ChatScreenContent extends StatefulWidget {
   final String userName;
+  final String? profileImageUrl;
   final String userRole;
   final int chatRoomId;
 
   const _ChatScreenContent({
     required this.userName,
+    this.profileImageUrl,
     required this.userRole,
     required this.chatRoomId,
   });
@@ -67,6 +72,11 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
   int? _currentUserId;
   List<ChatMessage> _messages = [];
   File? _selectedImage;
+
+  String _initialFor(String name) {
+    if (name.isEmpty) return '?';
+    return name[0].toUpperCase();
+  }
 
   @override
   void initState() {
@@ -164,6 +174,35 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+
+    final isTinyScreen = screenWidth < 360;
+
+    final appBarAvatarRadius = isTinyScreen ? 16.0 : 20.0;
+    final appBarInitialFontSize = isTinyScreen ? 14.0 : 18.0;
+    final appBarNameFontSize = isTinyScreen ? 14.0 : 16.0;
+    final appBarRoleFontSize = isTinyScreen ? 11.0 : 12.0;
+    final appBarSpacing = isTinyScreen ? 8.0 : 12.0;
+
+    final messageListHorizontalPadding = isTinyScreen ? 8.0 : 12.0;
+    final messageListVerticalPadding = isTinyScreen ? 12.0 : 16.0;
+    final bubbleMaxWidth = screenWidth * (isTinyScreen ? 0.84 : 0.78);
+    final bubbleFontSize = isTinyScreen ? 14.0 : 15.0;
+    final bubbleTimeSize = isTinyScreen ? 10.0 : 11.0;
+    final bubblePaddingHorizontal = isTinyScreen ? 12.0 : 16.0;
+    final bubblePaddingVertical = isTinyScreen ? 8.0 : 10.0;
+    final bubbleImageHeight = isTinyScreen ? 160.0 : 200.0;
+
+    final inputHorizontalPadding = isTinyScreen ? 8.0 : 12.0;
+    final inputVerticalPadding = isTinyScreen ? 6.0 : 8.0;
+    final inputTextPaddingHorizontal = isTinyScreen ? 12.0 : 16.0;
+    final inputTextPaddingVertical = isTinyScreen ? 8.0 : 10.0;
+    final attachIconSize = isTinyScreen ? 24.0 : 28.0;
+    final sendIconSize = isTinyScreen ? 18.0 : 20.0;
+    final sendButtonPadding = isTinyScreen ? 10.0 : 12.0;
+    final selectedImageSize = isTinyScreen ? 52.0 : 60.0;
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -176,26 +215,31 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
         title: Row(
           children: [
             CircleAvatar(
-              radius: 20,
+              radius: appBarAvatarRadius,
               backgroundColor: Colors.white,
-              child: Text(
-                widget.userName[0].toUpperCase(),
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryGreen,
-                ),
-              ),
+              backgroundImage: widget.profileImageUrl != null && widget.profileImageUrl!.isNotEmpty
+                  ? NetworkImage(widget.profileImageUrl!)
+                  : null,
+              child: widget.profileImageUrl == null || widget.profileImageUrl!.isEmpty
+                  ? Text(
+                      _initialFor(widget.userName),
+                      style: TextStyle(
+                        fontSize: appBarInitialFontSize,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryGreen,
+                      ),
+                    )
+                  : null,
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: appBarSpacing),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     widget.userName,
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style: TextStyle(
+                      fontSize: appBarNameFontSize,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),
@@ -204,7 +248,7 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
                   Text(
                     widget.userRole,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: appBarRoleFontSize,
                       color: Colors.white.withOpacity(0.9),
                     ),
                   ),
@@ -290,7 +334,7 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
               // Messages List
               Expanded(
                 child: state is ChatLoading && _messages.isEmpty
-                    ? Center(
+                    ? const Center(
                         child: CircularProgressIndicator(
                           color: AppTheme.primaryGreen,
                         ),
@@ -378,14 +422,26 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
                                 child: ListView.builder(
                                   controller: _scrollController,
                                   reverse: true,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 16,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: messageListHorizontalPadding,
+                                    vertical: messageListVerticalPadding,
                                   ),
                                   itemCount: _messages.length,
                                   itemBuilder: (context, index) {
                                     final message = _messages[index];
-                                    return _buildMessageBubble(message);
+                                    return _buildMessageBubble(
+                                      message,
+                                      maxWidth: bubbleMaxWidth,
+                                      textFontSize: bubbleFontSize,
+                                      timeFontSize: bubbleTimeSize,
+                                      horizontalPadding: bubblePaddingHorizontal,
+                                      verticalPadding: bubblePaddingVertical,
+                                      imageHeight: bubbleImageHeight,
+                                      peerAvatarRadius: isTinyScreen ? 14.0 : 16.0,
+                                      peerAvatarFontSize: isTinyScreen ? 11.0 : 12.0,
+                                      outerSpacing: isTinyScreen ? 6.0 : 8.0,
+                                      timestampIconSize: isTinyScreen ? 12.0 : 14.0,
+                                    );
                                   },
                                 ),
                               ),
@@ -394,21 +450,24 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
               // Typing indicator (optional)
               if (_isTyping)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isTinyScreen ? 12 : 16,
+                    vertical: isTinyScreen ? 6 : 8,
+                  ),
                   child: Row(
                     children: [
                       Text(
                         '${widget.userName} is typing',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: isTinyScreen ? 11 : 12,
                           color: Colors.grey[600],
                           fontStyle: FontStyle.italic,
                         ),
                       ),
                       const SizedBox(width: 8),
                       SizedBox(
-                    width: 20,
-                    height: 20,
+                    width: isTinyScreen ? 16 : 20,
+                    height: isTinyScreen ? 16 : 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.grey[400]!),
@@ -432,7 +491,10 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
             ),
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: EdgeInsets.symmetric(
+                  horizontal: inputHorizontalPadding,
+                  vertical: inputVerticalPadding,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -451,8 +513,8 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
                               borderRadius: BorderRadius.circular(8),
                               child: Image.file(
                                 _selectedImage!,
-                                width: 60,
-                                height: 60,
+                                width: selectedImageSize,
+                                height: selectedImageSize,
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -462,7 +524,7 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
                                 'Image selected',
                                 style: TextStyle(
                                   color: Colors.grey[700],
-                                  fontSize: 14,
+                                  fontSize: isTinyScreen ? 13 : 14,
                                 ),
                               ),
                             ),
@@ -489,7 +551,7 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
                           icon: Icon(
                             Icons.image,
                             color: AppTheme.primaryGreen,
-                            size: 28,
+                            size: attachIconSize,
                           ),
                         ),
 
@@ -507,11 +569,14 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
                               textCapitalization: TextCapitalization.sentences,
                               decoration: InputDecoration(
                                 hintText: 'Type a message...',
-                                hintStyle: TextStyle(color: Colors.grey[500]),
+                                hintStyle: TextStyle(
+                                  color: Colors.grey[500],
+                                  fontSize: isTinyScreen ? 13 : 14,
+                                ),
                                 border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 10,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: inputTextPaddingHorizontal,
+                                  vertical: inputTextPaddingVertical,
                                 ),
                               ),
                               onChanged: (value) {
@@ -527,15 +592,15 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
                         GestureDetector(
                           onTap: _sendMessage,
                           child: Container(
-                            padding: const EdgeInsets.all(12),
+                            padding: EdgeInsets.all(sendButtonPadding),
                             decoration: BoxDecoration(
                               color: AppTheme.primaryGreen,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.send,
                               color: Colors.white,
-                              size: 20,
+                              size: sendIconSize,
                             ),
                           ),
                         ),
@@ -553,11 +618,23 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
     );
   }
 
-  Widget _buildMessageBubble(ChatMessage message) {
+  Widget _buildMessageBubble(
+    ChatMessage message, {
+    required double maxWidth,
+    required double textFontSize,
+    required double timeFontSize,
+    required double horizontalPadding,
+    required double verticalPadding,
+    required double imageHeight,
+    required double peerAvatarRadius,
+    required double peerAvatarFontSize,
+    required double outerSpacing,
+    required double timestampIconSize,
+  }) {
     final isSent = message.sender.id == _currentUserId;
     final hasImage = message.image != null && message.image!.isNotEmpty;
     final hasText = message.content.isNotEmpty;
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -566,22 +643,28 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
         children: [
           if (!isSent) ...[
             CircleAvatar(
-              radius: 16,
+              radius: peerAvatarRadius,
               backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
-              child: Text(
-                widget.userName[0].toUpperCase(),
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryGreen,
-                ),
-              ),
+              backgroundImage: widget.profileImageUrl != null && widget.profileImageUrl!.isNotEmpty
+                  ? NetworkImage(widget.profileImageUrl!)
+                  : null,
+              child: widget.profileImageUrl == null || widget.profileImageUrl!.isEmpty
+                  ? Text(
+                      _initialFor(widget.userName),
+                      style: TextStyle(
+                        fontSize: peerAvatarFontSize,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryGreen,
+                      ),
+                    )
+                  : null,
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: outerSpacing),
           ],
           Flexible(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: verticalPadding),
               decoration: BoxDecoration(
                 color: isSent ? AppTheme.primaryGreen : Colors.white,
                 borderRadius: BorderRadius.only(
@@ -606,11 +689,12 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
                       borderRadius: BorderRadius.circular(12),
                       child: Image.network(
                         message.image!,
+                        height: imageHeight,
                         fit: BoxFit.cover,
                         loadingBuilder: (context, child, loadingProgress) {
                           if (loadingProgress == null) return child;
                           return Container(
-                            height: 200,
+                            height: imageHeight,
                             alignment: Alignment.center,
                             child: CircularProgressIndicator(
                               value: loadingProgress.expectedTotalBytes != null
@@ -623,7 +707,7 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
                         },
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
-                            height: 200,
+                            height: imageHeight,
                             alignment: Alignment.center,
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -653,7 +737,7 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
                     Text(
                       message.content,
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: textFontSize,
                         color: isSent ? Colors.white : Colors.black87,
                         height: 1.4,
                       ),
@@ -665,7 +749,7 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
                       Text(
                         _formatMessageTime(message.timestamp),
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: timeFontSize,
                           color: isSent ? Colors.white.withOpacity(0.8) : Colors.grey[600],
                         ),
                       ),
@@ -673,7 +757,7 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
                         const SizedBox(width: 4),
                         Icon(
                           message.isRead ? Icons.done_all : Icons.done,
-                          size: 14,
+                          size: timestampIconSize,
                           color: message.isRead ? Colors.white : Colors.white.withOpacity(0.7),
                         ),
                       ],
@@ -683,7 +767,7 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
               ),
             ),
           ),
-          if (isSent) const SizedBox(width: 8),
+          if (isSent) SizedBox(width: outerSpacing),
         ],
       ),
     );

@@ -93,7 +93,12 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
     final userName = authState is AuthSuccess ? authState.user.fullName : 'Buyer';
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 600;
-    final horizontalPadding = screenWidth < 600 ? 16.0 : 20.0;
+    final isTinyScreen = screenWidth < 360;
+    final horizontalPadding = isTinyScreen ? 12.0 : (isSmallScreen ? 16.0 : 20.0);
+    final headerTitleSize = isTinyScreen ? 18.0 : (isSmallScreen ? 22.0 : 24.0);
+    final headerSubtitleSize = isTinyScreen ? 13.0 : 16.0;
+    final searchIconSize = isTinyScreen ? 20.0 : 24.0;
+    final categoryHeight = isTinyScreen ? 82.0 : (isSmallScreen ? 92.0 : 100.0);
     final gridCrossAxisCount = screenWidth >= 1200
         ? 4
         : screenWidth >= 900
@@ -184,15 +189,15 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                                   AppLocalizations.of(context)?.home ?? 'Home',
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.9),
-                                    fontSize: 16,
+                                    fontSize: headerSubtitleSize,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   'Hello, $userName',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 24,
+                                    fontSize: headerTitleSize,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -328,7 +333,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.search, color: Colors.grey),
+                            Icon(Icons.search, color: Colors.grey, size: searchIconSize),
                             const SizedBox(width: 12),
                             Expanded(
                               child: TextField(
@@ -348,7 +353,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                                 },
                               ),
                             ),
-                            const Icon(Icons.tune, color: Color(0xFF2196F3)),
+                            Icon(Icons.tune, color: const Color(0xFF2196F3), size: searchIconSize),
                           ],
                         ),
                       ),
@@ -372,7 +377,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                       ),
                       const SizedBox(height: 14),
                       SizedBox(
-                        height: isSmallScreen ? 92 : 100,
+                        height: categoryHeight,
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
                           itemCount: _categories.length,

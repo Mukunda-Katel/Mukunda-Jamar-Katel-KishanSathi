@@ -49,6 +49,36 @@ class _ConsultantProfileScreenState extends State<ConsultantProfileScreen> {
     return AppConfig.getUrl(rawUrl.startsWith('/') ? rawUrl : '/$rawUrl');
   }
 
+  Map<String, dynamic> _safeJsonObject(String rawBody) {
+    if (rawBody.trim().isEmpty) return <String, dynamic>{};
+    try {
+      final decoded = jsonDecode(rawBody);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } catch (_) {
+      // Non-JSON responses are handled by caller.
+    }
+    return <String, dynamic>{};
+  }
+
+  String _buildUploadErrorMessage(http.Response response, Map<String, dynamic> body) {
+    final apiMessage = (body['error'] ?? body['message'])?.toString();
+    if (apiMessage != null && apiMessage.isNotEmpty) {
+      return apiMessage;
+    }
+
+    final compact = response.body.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (compact.toLowerCase().startsWith('<!doctype html') || compact.toLowerCase().startsWith('<html')) {
+      return 'Server returned an HTML error page (status ${response.statusCode}). Please check backend logs.';
+    }
+    if (compact.isEmpty) {
+      return 'Server error (status ${response.statusCode}).';
+    }
+    final preview = compact.length > 180 ? '${compact.substring(0, 180)}...' : compact;
+    return 'Server error (status ${response.statusCode}): $preview';
+  }
+
   Future<void> _loadProfileImageFromServer() async {
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthSuccess) return;
@@ -101,13 +131,14 @@ class _ConsultantProfileScreenState extends State<ConsultantProfileScreen> {
         Uri.parse(AppConfig.getUrl('/api/auth/profile/')),
       );
       request.headers['Authorization'] = 'Token ${_normalizedToken(token)}';
+      request.headers['Accept'] = 'application/json';
       request.files.add(
         await http.MultipartFile.fromPath('profile_picture', File(pickedFile.path).path),
       );
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
-      final body = response.body.isNotEmpty ? jsonDecode(response.body) : <String, dynamic>{};
+      final body = _safeJsonObject(response.body);
 
       if (response.statusCode == 200) {
         final authState = context.read<AuthBloc>().state;
@@ -131,10 +162,11 @@ class _ConsultantProfileScreenState extends State<ConsultantProfileScreen> {
           ),
         );
       } else {
+        final errorMessage = _buildUploadErrorMessage(response, body);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text((body['error'] ?? body['message'] ?? 'Failed to update profile picture.').toString()),
+            content: Text(errorMessage),
             backgroundColor: Colors.red,
           ),
         );

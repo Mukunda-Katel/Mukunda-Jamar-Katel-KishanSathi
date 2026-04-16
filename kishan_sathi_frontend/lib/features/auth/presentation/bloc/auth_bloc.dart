@@ -122,10 +122,53 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     CheckAuthStatus event,
     Emitter<AuthState> emit,
   ) async {
-    final isLoggedIn = await authRepository.isLoggedIn();
-    if (isLoggedIn) {
+    emit(const AuthLoading());
+    try {
+      final token = await authRepository.getToken();
+      if (token == null || token.isEmpty) {
+        emit(const AuthUnauthenticated());
+        return;
+      }
+
+      try {
+        final profile = await authRepository.getCurrentUserProfile();
+        if (profile != null) {
+          final user = UserModel.fromJson(profile);
+          emit(
+            AuthSuccess(
+              token: token,
+              user: user,
+              message: 'Session restored',
+            ),
+          );
+          return;
+        }
+      } catch (e) {
+        final error = e.toString().toLowerCase();
+        final isAuthError = error.contains('401') || error.contains('expired');
+
+        if (isAuthError) {
+          await authRepository.logout();
+          emit(const AuthUnauthenticated());
+          return;
+        }
+      }
+
+      final cachedUser = authRepository.getCachedUserProfile();
+      if (cachedUser != null) {
+        final user = UserModel.fromJson(cachedUser);
+        emit(
+          AuthSuccess(
+            token: token,
+            user: user,
+            message: 'Session restored',
+          ),
+        );
+        return;
+      }
+
       emit(const AuthUnauthenticated());
-    } else {
+    } catch (_) {
       emit(const AuthUnauthenticated());
     }
   }

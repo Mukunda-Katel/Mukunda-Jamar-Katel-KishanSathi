@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../core/constants/api_constants.dart';
 
 class WeatherService {
-  static const String baseUrl = 'http://10.0.2.2:8000/api/farmer';
+  static const String baseUrl = '${ApiConstants.apiBaseUrl}/farmer';
 
   /// Get current weather for a location
   Future<Map<String, dynamic>> getCurrentWeather(

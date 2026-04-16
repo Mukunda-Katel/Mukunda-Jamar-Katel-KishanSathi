@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "345437538018",
+    "project_id": "push-notifications-8677d",
+    "storage_bucket": "push-notifications-8677d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:345437538018:android:620290619c03c46fc100bb",
+        "android_client_info": {
+          "package_name": "com.example.kishan_sathi_frontend"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDf91MMc61oB6kD5kA29rLJjX_P0xo0cAY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

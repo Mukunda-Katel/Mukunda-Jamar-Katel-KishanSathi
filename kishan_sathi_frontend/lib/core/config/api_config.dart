@@ -1,5 +1,6 @@
+import '../constants/api_constants.dart';
+
 class ApiConfig {
-  // For Android Emulator (10.0.2.2 maps to localhost)
-  static const String baseUrl = 'http://10.0.2.2:8000/api';
-  static const Duration timeout = Duration(seconds: 30);
+  static const String baseUrl = ApiConstants.apiBaseUrl;
+  static const Duration timeout = ApiConstants.timeout;
 }

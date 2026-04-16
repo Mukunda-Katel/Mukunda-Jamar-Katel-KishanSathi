@@ -58,8 +58,23 @@ class _ChatListScreenState extends State<ChatListScreen> {
     }
   }
 
+  String _initialFor(String name) {
+    if (name.isEmpty) return '?';
+    return name[0].toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTinyScreen = screenWidth < 360;
+    final isSmallScreen = screenWidth < 600;
+
+    final headerPadding = isTinyScreen ? 12.0 : (isSmallScreen ? 16.0 : 18.0);
+    final headerIconSize = isTinyScreen ? 24.0 : 28.0;
+    final headerTitleSize = isTinyScreen ? 20.0 : (isSmallScreen ? 22.0 : 24.0);
+    final headerActionIconSize = isTinyScreen ? 22.0 : 24.0;
+    final listVerticalPadding = isTinyScreen ? 6.0 : 8.0;
+
     return BlocProvider.value(
       value: _chatBloc,
       child: Scaffold(
@@ -81,19 +96,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
               child: SafeArea(
                 bottom: false,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(headerPadding),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.chat_bubble,
                         color: Colors.white,
-                        size: 28,
+                        size: headerIconSize,
                       ),
-                      const SizedBox(width: 12),
-                      const Text(
+                      SizedBox(width: isTinyScreen ? 8 : 12),
+                      Text(
                         'Messages',
                         style: TextStyle(
-                          fontSize: 24,
+                          fontSize: headerTitleSize,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -110,8 +125,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         icon: const Icon(
                           Icons.search,
                           color: Colors.white,
-                          size: 24,
+                          size: 22,
                         ),
+                        iconSize: headerActionIconSize,
                       ),
                     ],
                   ),
@@ -187,7 +203,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         _refreshChatList();
                       },
                       child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        padding: EdgeInsets.symmetric(vertical: listVerticalPadding),
                         itemCount: state.chatRooms.length,
                         itemBuilder: (context, index) {
                           final chatRoom = state.chatRooms[index];
@@ -199,6 +215,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                             context,
                             chatRoom.id,
                             otherUser.fullName,
+                            otherUser.profilePictureUrl,
                             otherUser.role,
                             chatRoom.lastMessage?.content ?? 'No messages yet',
                             _formatTimestamp(
@@ -225,12 +242,30 @@ class _ChatListScreenState extends State<ChatListScreen> {
     BuildContext context,
     int roomId,
     String userName,
+    String? profilePictureUrl,
     String userRole,
     String lastMessage,
     String timestamp,
     int unreadCount,
   ) {
     final hasUnread = unreadCount > 0;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTinyScreen = screenWidth < 360;
+    final isSmallScreen = screenWidth < 600;
+
+    final avatarRadius = isTinyScreen ? 24.0 : (isSmallScreen ? 26.0 : 28.0);
+    final initialFontSize = isTinyScreen ? 20.0 : 24.0;
+    final cardRadius = isTinyScreen ? 10.0 : 12.0;
+    final cardPadding = isTinyScreen ? 10.0 : 12.0;
+    final cardMarginHorizontal = isTinyScreen ? 6.0 : 8.0;
+    final nameFontSize = isTinyScreen ? 15.0 : 16.0;
+    final timestampFontSize = isTinyScreen ? 11.0 : 12.0;
+    final roleFontSize = isTinyScreen ? 9.0 : 10.0;
+    final messageFontSize = isTinyScreen ? 13.0 : 14.0;
+    final badgeFontSize = isTinyScreen ? 11.0 : 12.0;
+    final badgePadding = isTinyScreen ? 5.0 : 6.0;
+    final rowSpacing = isTinyScreen ? 10.0 : 12.0;
+    final sectionSpacing = isTinyScreen ? 4.0 : 6.0;
     
     return InkWell(
       onTap: () async {
@@ -240,6 +275,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
           MaterialPageRoute(
             builder: (context) => ChatScreen(
               userName: userName,
+              profileImageUrl: profilePictureUrl,
               userRole: userRole,
               chatRoomId: roomId,
             ),
@@ -249,10 +285,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
         _refreshChatList();
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        margin: EdgeInsets.symmetric(horizontal: cardMarginHorizontal, vertical: 4),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(cardRadius),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
@@ -262,24 +298,29 @@ class _ChatListScreenState extends State<ChatListScreen> {
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(12.0),
+          padding: EdgeInsets.all(cardPadding),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Avatar
               CircleAvatar(
-                radius: 28,
+                radius: avatarRadius,
                 backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
-                child: Text(
-                  userName[0].toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryGreen,
-                  ),
-                ),
+                backgroundImage: profilePictureUrl != null && profilePictureUrl.isNotEmpty
+                    ? NetworkImage(profilePictureUrl)
+                    : null,
+                child: profilePictureUrl == null || profilePictureUrl.isEmpty
+                    ? Text(
+                        _initialFor(userName),
+                        style: TextStyle(
+                          fontSize: initialFontSize,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryGreen,
+                        ),
+                      )
+                    : null,
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: rowSpacing),
               
               // Chat Info
               Expanded(
@@ -294,7 +335,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           child: Text(
                             userName,
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: nameFontSize,
                               fontWeight: hasUnread ? FontWeight.bold : FontWeight.w600,
                               color: Colors.black87,
                             ),
@@ -306,14 +347,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         Text(
                           timestamp,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: timestampFontSize,
                             color: hasUnread ? AppTheme.primaryGreen : Colors.grey[600],
                             fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: sectionSpacing),
                     
                     // Role Badge
                     Container(
@@ -325,13 +366,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       child: Text(
                         userRole,
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: roleFontSize,
                           color: AppTheme.primaryGreen,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    SizedBox(height: sectionSpacing + 2),
                     
                     // Last Message
                     Row(
@@ -340,7 +381,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           child: Text(
                             lastMessage,
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: messageFontSize,
                               color: hasUnread ? Colors.black87 : Colors.grey[600],
                               fontWeight: hasUnread ? FontWeight.w500 : FontWeight.normal,
                             ),
@@ -349,18 +390,18 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           ),
                         ),
                         if (hasUnread) ...[
-                          const SizedBox(width: 8),
+                          SizedBox(width: sectionSpacing + 2),
                           Container(
-                            padding: const EdgeInsets.all(6),
+                            padding: EdgeInsets.all(badgePadding),
                             decoration: BoxDecoration(
                               color: AppTheme.primaryGreen,
                               shape: BoxShape.circle,
                             ),
                             child: Text(
                               '$unreadCount',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 12,
+                                fontSize: badgeFontSize,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -379,29 +420,32 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   Widget _buildEmptyState() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTinyScreen = screenWidth < 360;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             Icons.chat_bubble_outline,
-            size: 80,
+            size: isTinyScreen ? 64 : 80,
             color: Colors.grey[400],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isTinyScreen ? 12 : 16),
           Text(
             'No messages yet',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: isTinyScreen ? 16 : 18,
               fontWeight: FontWeight.w600,
               color: Colors.grey[600],
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: isTinyScreen ? 6 : 8),
           Text(
             'Start chatting with buyers',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: isTinyScreen ? 13 : 14,
               color: Colors.grey[500],
             ),
           ),

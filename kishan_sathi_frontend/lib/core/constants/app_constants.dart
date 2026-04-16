@@ -7,6 +7,7 @@ class AppConstants {
   static const String tokenKey = 'auth_token';
   static const String userKey = 'user_data';
   static const String themeKey = 'theme_mode';
+  static const String favoriteProductIdsKey = 'favorite_product_ids';
   
   // Pagination
   static const int defaultPageSize = 20;

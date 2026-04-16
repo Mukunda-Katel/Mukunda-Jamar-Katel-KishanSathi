@@ -1,8 +1,14 @@
 // ignore_for_file: deprecated_member_use
 
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:kishan_sathi_frontend/features/auth/presentation/bloc/auth_event.dart';
+import '../../core/config/app_config.dart';
 import '../../core/theme/app_theme.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/bloc/auth_state.dart';
@@ -20,6 +26,7 @@ import '../settings/language_settings_screen.dart';
 import 'ai_chatbot_screen.dart';
 import '../../features/chatbot/presentation/bloc/chatbot_bloc.dart';
 import '../../features/chatbot/data/services/chatbot_service.dart';
+import '../../features/payment/data/datasources/khalti_remote_data_source.dart';
 
 class FarmerDashboard extends StatefulWidget {
   const FarmerDashboard({super.key});
@@ -50,8 +57,8 @@ class _FarmerDashboardState extends State<FarmerDashboard> {
     final isTablet = screenWidth >= 768;
 
     final navHorizontalPadding = isTablet ? 20.0 : (isTinyScreen ? 4.0 : 8.0);
-    final navVerticalPadding = isTablet ? 10.0 : 8.0;
-    final navHeight = isTablet ? 86.0 : (isTinyScreen ? 68.0 : 74.0);
+    final navVerticalPadding = isTablet ? 8.0 : (isTinyScreen ? 4.0 : 6.0);
+    final navMinHeight = isTablet ? 72.0 : (isTinyScreen ? 56.0 : 62.0);
     final iconSize = isTablet ? 26.0 : (isTinyScreen ? 18.0 : (isCompactNav ? 20.0 : 24.0));
     final labelFontSize = (isTablet ? 12.0 : (isTinyScreen ? 8.0 : (isCompactNav ? 9.0 : 11.0))) /
         textScaleFactor;
@@ -93,7 +100,7 @@ class _FarmerDashboardState extends State<FarmerDashboard> {
               )
             : null,
         bottomNavigationBar: Container(
-          height: navHeight,
+          constraints: BoxConstraints(minHeight: navMinHeight),
           decoration: BoxDecoration(
             color: Colors.white,
             boxShadow: [
@@ -192,7 +199,7 @@ class _FarmerDashboardState extends State<FarmerDashboard> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(horizontal: isCompactNav ? 6 : 10, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: isCompactNav ? 6 : 8, vertical: 4),
         decoration: BoxDecoration(
           color: isSelected ? AppTheme.primaryGreen.withOpacity(0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
@@ -245,6 +252,18 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTinyScreen = screenWidth < 360;
+    final isSmallScreen = screenWidth < 600;
+    final horizontalPadding = isTinyScreen ? 12.0 : (isSmallScreen ? 16.0 : 20.0);
+    final headerTitleSize = isTinyScreen ? 20.0 : (isSmallScreen ? 22.0 : 24.0);
+    final headerSubtitleSize = isTinyScreen ? 13.0 : 16.0;
+    final notificationIconSize = isTinyScreen ? 24.0 : 28.0;
+    final sectionTitleSize = isTinyScreen ? 18.0 : 20.0;
+    final quickActionGap = isTinyScreen ? 8.0 : 12.0;
+    final quickActionTopGap = isTinyScreen ? 12.0 : 16.0;
+    final listBottomGap = isTinyScreen ? 16.0 : 20.0;
+
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
         // Get farmer name from auth state, fallback to "Farmer"
@@ -260,7 +279,7 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                 // App Bar
                 SliverToBoxAdapter(
                   child: Container(
-                    padding: const EdgeInsets.all(20),
+                    padding: EdgeInsets.all(horizontalPadding),
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(
                         colors: [AppTheme.primaryGreen, AppTheme.lightGreen],
@@ -285,15 +304,15 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                                   AppLocalizations.of(context)!.welcomeBack,
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.9),
-                                    fontSize: 16,
+                                    fontSize: headerSubtitleSize,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   farmerName,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 24,
+                                    fontSize: headerTitleSize,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -303,10 +322,10 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                               children: [
                                 IconButton(
                                   onPressed: () {},
-                                  icon: const Icon(
+                                  icon: Icon(
                                     Icons.notifications_outlined,
                                     color: Colors.white,
-                                    size: 28,
+                                    size: notificationIconSize,
                                   ),
                                 ),
                                 Positioned(
@@ -322,7 +341,7 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                                       '3',
                                       style: TextStyle(
                                         color: Colors.white,
-                                        fontSize: 10,
+                                        fontSize: 9,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -345,19 +364,19 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                 // Quick Actions
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: EdgeInsets.all(horizontalPadding),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           AppLocalizations.of(context)!.quickActions,
-                          style: const TextStyle(
-                            fontSize: 20,
+                          style: TextStyle(
+                            fontSize: sectionTitleSize,
                             fontWeight: FontWeight.bold,
                             color: AppTheme.darkGreen,
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: quickActionTopGap),
                         Row(
                           children: [
                             Expanded(
@@ -383,7 +402,7 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                                 },
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            SizedBox(width: quickActionGap),
                             Expanded(
                               child: _QuickActionCard(
                                 icon: Icons.smart_toy,
@@ -406,7 +425,7 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: quickActionGap),
                         Row(
                           children: [
                             Expanded(
@@ -424,7 +443,7 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                                 },
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            SizedBox(width: quickActionGap),
                             Expanded(
                               child: _QuickActionCard(
                                 icon: Icons.trending_up,
@@ -443,14 +462,14 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                 // My Active Crops
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           AppLocalizations.of(context)!.myActiveCrops,
-                          style: const TextStyle(
-                            fontSize: 20,
+                          style: TextStyle(
+                            fontSize: sectionTitleSize,
                             fontWeight: FontWeight.bold,
                             color: AppTheme.darkGreen,
                           ),
@@ -535,14 +554,14 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                       }
 
                       return SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
                               final product = state.myProducts[index];
                               return Padding(
                                 padding: EdgeInsets.only(
-                                  bottom: index == state.myProducts.length - 1 ? 20 : 12,
+                                  bottom: index == state.myProducts.length - 1 ? listBottomGap : quickActionGap,
                                 ),
                                 child: _CropCard(
                                   cropName: product.name,
@@ -601,10 +620,18 @@ class _QuickActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTinyScreen = screenWidth < 360;
+    final cardPadding = isTinyScreen ? 12.0 : 16.0;
+    final iconPadding = isTinyScreen ? 9.0 : 12.0;
+    final iconSize = isTinyScreen ? 24.0 : 28.0;
+    final labelSize = isTinyScreen ? 12.0 : 13.0;
+    final spacing = isTinyScreen ? 6.0 : 8.0;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(cardPadding),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -619,7 +646,7 @@ class _QuickActionCard extends StatelessWidget {
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(iconPadding),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
                 shape: BoxShape.circle,
@@ -627,15 +654,15 @@ class _QuickActionCard extends StatelessWidget {
               child: Icon(
                 icon,
                 color: color,
-                size: 28,
+                size: iconSize,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: spacing),
             Text(
               label,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: labelSize,
                 fontWeight: FontWeight.w600,
                 color: Colors.grey[800],
               ),
@@ -671,6 +698,17 @@ class _CropCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTinyScreen = screenWidth < 360;
+    final isSmallScreen = screenWidth < 600;
+    final imageHeight = isTinyScreen ? 120.0 : (isSmallScreen ? 132.0 : 140.0);
+    final cardPadding = isTinyScreen ? 12.0 : 16.0;
+    final titleSize = isTinyScreen ? 16.0 : 18.0;
+    final statusFontSize = isTinyScreen ? 10.0 : 11.0;
+    final metaIconSize = isTinyScreen ? 14.0 : 16.0;
+    final metaFontSize = isTinyScreen ? 12.0 : 13.0;
+    final priceSize = isTinyScreen ? 14.0 : 15.0;
+
     Color statusColor = health >= 80
         ? AppTheme.primaryGreen
         : health >= 60
@@ -697,12 +735,12 @@ class _CropCard extends StatelessWidget {
             child: imageUrl != null && imageUrl!.isNotEmpty
                 ? Image.network(
                     imageUrl!,
-                    height: 140,
+                    height: imageHeight,
                     width: double.infinity,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
                       return Container(
-                        height: 140,
+                        height: imageHeight,
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [AppTheme.primaryGreen.withOpacity(0.3), AppTheme.lightGreen.withOpacity(0.2)],
@@ -721,7 +759,7 @@ class _CropCard extends StatelessWidget {
                     },
                   )
                 : Container(
-                    height: 140,
+                  height: imageHeight,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [AppTheme.primaryGreen.withOpacity(0.3), AppTheme.lightGreen.withOpacity(0.2)],
@@ -739,7 +777,7 @@ class _CropCard extends StatelessWidget {
                   ),
           ),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(cardPadding),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -748,8 +786,8 @@ class _CropCard extends StatelessWidget {
                   children: [
                     Text(
                       cropName,
-                      style: const TextStyle(
-                        fontSize: 18,
+                      style: TextStyle(
+                        fontSize: titleSize,
                         fontWeight: FontWeight.bold,
                         color: AppTheme.darkGreen,
                       ),
@@ -764,7 +802,7 @@ class _CropCard extends StatelessWidget {
                         status,
                         style: TextStyle(
                           color: statusColor,
-                          fontSize: 11,
+                          fontSize: statusFontSize,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -774,23 +812,23 @@ class _CropCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Icon(Icons.inventory_2_outlined, size: 16, color: Colors.grey[600]),
+                    Icon(Icons.inventory_2_outlined, size: metaIconSize, color: Colors.grey[600]),
                     const SizedBox(width: 4),
                     Text(
                       area,
                       style: TextStyle(
                         color: Colors.grey[700],
-                        fontSize: 13,
+                        fontSize: metaFontSize,
                       ),
                     ),
                     const SizedBox(width: 16),
-                    Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
+                    Icon(Icons.calendar_today, size: metaIconSize, color: Colors.grey[600]),
                     const SizedBox(width: 4),
                     Text(
                       plantedDate,
                       style: TextStyle(
                         color: Colors.grey[700],
-                        fontSize: 13,
+                        fontSize: metaFontSize,
                       ),
                     ),
                   ],
@@ -799,26 +837,26 @@ class _CropCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.currency_rupee, size: 16, color: Colors.grey[600]),
+                      Icon(Icons.currency_rupee, size: metaIconSize, color: Colors.grey[600]),
                       const SizedBox(width: 4),
                       Text(
                         price!,
                         style: TextStyle(
                           color: AppTheme.primaryGreen,
-                          fontSize: 15,
+                          fontSize: priceSize,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(width: 16),
                       if (location != null) ...[
-                        Icon(Icons.location_on_outlined, size: 16, color: Colors.grey[600]),
+                        Icon(Icons.location_on_outlined, size: metaIconSize, color: Colors.grey[600]),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             location!,
                             style: TextStyle(
                               color: Colors.grey[700],
-                              fontSize: 13,
+                              fontSize: metaFontSize,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1449,11 +1487,295 @@ class ConsultationScreen extends StatelessWidget {
   }
 }
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final ImagePicker _imagePicker = ImagePicker();
+  bool _isUploadingImage = false;
+  bool _isLinkingKhalti = false;
+  String? _profileImageUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfileImageFromServer();
+  }
+
+  String _normalizedToken(String token) {
+    final trimmed = token.trim();
+    if (trimmed.startsWith('Token ')) {
+      return trimmed.substring(6).trim();
+    }
+    if (trimmed.startsWith('Bearer ')) {
+      return trimmed.substring(7).trim();
+    }
+    return trimmed;
+  }
+
+  String? _resolveImageUrl(String? rawUrl) {
+    if (rawUrl == null || rawUrl.isEmpty) return null;
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+      return rawUrl;
+    }
+    return AppConfig.getUrl(rawUrl.startsWith('/') ? rawUrl : '/$rawUrl');
+  }
+
+  Map<String, dynamic> _safeJsonObject(String rawBody) {
+    if (rawBody.trim().isEmpty) return <String, dynamic>{};
+    try {
+      final decoded = jsonDecode(rawBody);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } catch (_) {
+      // Non-JSON responses are handled by caller.
+    }
+    return <String, dynamic>{};
+  }
+
+  String _buildUploadErrorMessage(http.Response response, Map<String, dynamic> body) {
+    final apiMessage = (body['error'] ?? body['message'])?.toString();
+    if (apiMessage != null && apiMessage.isNotEmpty) {
+      return apiMessage;
+    }
+
+    final compact = response.body.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (compact.toLowerCase().startsWith('<!doctype html') || compact.toLowerCase().startsWith('<html')) {
+      return 'Server returned an HTML error page (status ${response.statusCode}). Please check backend logs.';
+    }
+    if (compact.isEmpty) {
+      return 'Server error (status ${response.statusCode}).';
+    }
+    final preview = compact.length > 180 ? '${compact.substring(0, 180)}...' : compact;
+    return 'Server error (status ${response.statusCode}): $preview';
+  }
+
+  Future<void> _loadProfileImageFromServer() async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthSuccess) return;
+
+    try {
+      final response = await http.get(
+        Uri.parse(AppConfig.getUrl('/api/auth/profile/')),
+        headers: {
+          'Authorization': 'Token ${_normalizedToken(authState.token)}',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final imageUrl = _resolveImageUrl(body['profile_picture_url'] as String?);
+        if (!mounted) return;
+        setState(() {
+          _profileImageUrl = imageUrl;
+        });
+        context.read<AuthBloc>().add(
+              AuthUserUpdated(
+                user: authState.user.copyWith(profilePictureUrl: imageUrl),
+              ),
+            );
+      }
+    } catch (_) {
+      // Keep fallback avatar if profile fetch fails.
+    }
+  }
+
+  Future<void> _pickAndUploadProfileImage({required String token}) async {
+    if (_isUploadingImage) return;
+
+    final pickedFile = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 1200,
+    );
+
+    if (pickedFile == null) return;
+
+    setState(() {
+      _isUploadingImage = true;
+    });
+
+    try {
+      final request = http.MultipartRequest(
+        'PATCH',
+        Uri.parse(AppConfig.getUrl('/api/auth/profile/')),
+      );
+      request.headers['Authorization'] = 'Token ${_normalizedToken(token)}';
+      request.headers['Accept'] = 'application/json';
+      request.files.add(
+        await http.MultipartFile.fromPath('profile_picture', File(pickedFile.path).path),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      final body = _safeJsonObject(response.body);
+
+      if (response.statusCode == 200) {
+        final authState = context.read<AuthBloc>().state;
+        final userData = body['user'] as Map<String, dynamic>?;
+        final imageUrl = _resolveImageUrl(userData?['profile_picture_url'] as String?);
+        if (!mounted) return;
+        setState(() {
+          _profileImageUrl = imageUrl;
+        });
+        if (authState is AuthSuccess) {
+          context.read<AuthBloc>().add(
+                AuthUserUpdated(
+                  user: authState.user.copyWith(
+                        profilePictureUrl: imageUrl,
+                      ),
+                ),
+              );
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile picture updated successfully.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        final errorMessage = _buildUploadErrorMessage(response, body);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to upload image: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingImage = false;
+        });
+      }
+    }
+  }
+
+  String _buildTestKhaltiId(dynamic user) {
+    final userId = user?.id is int ? user.id as int : 1;
+    final suffix = (userId % 10000).toString().padLeft(4, '0');
+    return '980000$suffix';
+  }
+
+  String _buildTestAccountName(dynamic user) {
+    final fullName = (user?.fullName ?? '').toString().trim();
+    if (fullName.isNotEmpty) return fullName;
+
+    final email = (user?.email ?? '').toString().trim();
+    if (email.isNotEmpty) return email;
+
+    final userId = user?.id is int ? user.id as int : 0;
+    return 'Farmer $userId';
+  }
+
+  Future<void> _linkSellerKhaltiTestAccount(AuthSuccess authState) async {
+    if (_isLinkingKhalti) return;
+
+    setState(() {
+      _isLinkingKhalti = true;
+    });
+
+    final remoteDataSource = KhaltiRemoteDataSource();
+    final testKhaltiId = _buildTestKhaltiId(authState.user);
+    final accountName = _buildTestAccountName(authState.user);
+
+    try {
+      await remoteDataSource.linkKhaltiAccount(
+        token: authState.token,
+        khaltiId: testKhaltiId,
+        accountName: accountName,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Seller Khalti test account linked: $testKhaltiId'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      final errorText = e.toString().toLowerCase();
+      final shouldUpdate = errorText.contains('already linked') || errorText.contains('already exists');
+
+      if (shouldUpdate) {
+        try {
+          await remoteDataSource.updateKhaltiAccount(
+            token: authState.token,
+            khaltiId: testKhaltiId,
+            accountName: accountName,
+          );
+
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Seller Khalti test account updated: $testKhaltiId'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } catch (updateError) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to update test Khalti account: $updateError'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to link test Khalti account: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLinkingKhalti = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTinyScreen = screenWidth < 360;
+    final isSmallScreen = screenWidth < 600;
+    final horizontalPadding = isTinyScreen ? 12.0 : (isSmallScreen ? 16.0 : 20.0);
+    final headerTitleSize = isTinyScreen ? 20.0 : 24.0;
+    final profileTopGap = isTinyScreen ? 22.0 : 30.0;
+    final avatarSize = isTinyScreen ? 80.0 : (isSmallScreen ? 90.0 : 100.0);
+    final profileNameSize = isTinyScreen ? 20.0 : 24.0;
+    final roleSize = isTinyScreen ? 13.0 : 14.0;
+    final emailSize = isTinyScreen ? 12.0 : 13.0;
+    final initialsSize = isTinyScreen ? 30.0 : 34.0;
+    final statsDividerHeight = isTinyScreen ? 34.0 : 40.0;
+    final statValueSize = isTinyScreen ? 18.0 : 22.0;
+    final statLabelSize = isTinyScreen ? 10.0 : 12.0;
+    final menuHorizontalPadding = isTinyScreen ? 16.0 : 20.0;
+    final menuVerticalPadding = isTinyScreen ? 14.0 : 16.0;
+    final menuIconSize = isTinyScreen ? 22.0 : 24.0;
+    final menuTitleSize = isTinyScreen ? 15.0 : 16.0;
+    final actionButtonHeight = isTinyScreen ? 52.0 : 56.0;
+
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthUnauthenticated) {
@@ -1467,6 +1789,7 @@ class ProfileScreen extends StatelessWidget {
       child: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, authState) {
           final user = authState is AuthSuccess ? authState.user : null;
+          final imageUrl = _profileImageUrl ?? _resolveImageUrl(user?.profilePictureUrl);
           
           return Scaffold(
             backgroundColor: AppTheme.backgroundColor,
@@ -1476,7 +1799,7 @@ class ProfileScreen extends StatelessWidget {
                   // Green Header Section
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(20),
+                    padding: EdgeInsets.all(horizontalPadding),
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(
                         colors: [AppTheme.primaryGreen, AppTheme.lightGreen],
@@ -1494,20 +1817,20 @@ class ProfileScreen extends StatelessWidget {
                           alignment: Alignment.centerLeft,
                           child: Text(
                             AppLocalizations.of(context)!.profile,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: Colors.white,
-                              fontSize: 24,
+                              fontSize: headerTitleSize,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
-                      const SizedBox(height: 30),
+                      SizedBox(height: profileTopGap),
                       // Profile Picture with Edit Icon
                       Stack(
                         children: [
                           Container(
-                            width: 100,
-                            height: 100,
+                            width: avatarSize,
+                            height: avatarSize,
                             decoration: BoxDecoration(
                               color: Colors.white,
                               shape: BoxShape.circle,
@@ -1518,44 +1841,73 @@ class ProfileScreen extends StatelessWidget {
                                   offset: const Offset(0, 4),
                                 ),
                               ],
+                              image: imageUrl != null && imageUrl.isNotEmpty
+                                  ? DecorationImage(
+                                      image: NetworkImage(imageUrl),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
                             ),
-                            child: const Icon(
-                              Icons.person,
-                              size: 50,
-                              color: AppTheme.primaryGreen,
-                            ),
+                            child: imageUrl == null || imageUrl.isEmpty
+                                ? Center(
+                                    child: Text(
+                                      user?.initials ?? 'F',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: AppTheme.primaryGreen,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: initialsSize,
+                                      ),
+                                    ),
+                                  )
+                                : null,
                           ),
                           Positioned(
                             bottom: 0,
                             right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 4,
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.edit,
-                                size: 16,
-                                color: AppTheme.primaryGreen,
+                            child: InkWell(
+                              onTap: authState is AuthSuccess
+                                  ? () => _pickAndUploadProfileImage(token: authState.token)
+                                  : null,
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: EdgeInsets.all(isTinyScreen ? 5 : 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 4,
+                                    ),
+                                  ],
+                                ),
+                                child: _isUploadingImage
+                                    ? const SizedBox(
+                                        height: 16,
+                                        width: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.camera_alt,
+                                        size: 16,
+                                        color: AppTheme.primaryGreen,
+                                      ),
                               ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: isTinyScreen ? 12 : 16),
                       // Name
                       Text(
                         user?.fullName ?? 'Ram Sharma',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.white,
-                          fontSize: 24,
+                          fontSize: profileNameSize,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -1565,14 +1917,17 @@ class ProfileScreen extends StatelessWidget {
                         user?.role.toUpperCase() ?? 'FARMER',
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.9),
-                          fontSize: 14,
+                          fontSize: roleSize,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                       const SizedBox(height: 8),
                       // Email
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isTinyScreen ? 12 : 16,
+                          vertical: isTinyScreen ? 6 : 8,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
@@ -1581,11 +1936,11 @@ class ProfileScreen extends StatelessWidget {
                           user?.email ?? 'farmer@kishansathi.com',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.9),
-                            fontSize: 13,
+                            fontSize: emailSize,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      SizedBox(height: isTinyScreen ? 18 : 24),
                       // Statistics Row
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -1593,24 +1948,30 @@ class ProfileScreen extends StatelessWidget {
                           _ProfileStat(
                             value: '6',
                             label: 'Active Crops',
+                            valueFontSize: statValueSize,
+                            labelFontSize: statLabelSize,
                           ),
                           Container(
-                            height: 40,
+                            height: statsDividerHeight,
                             width: 1,
                             color: Colors.white.withOpacity(0.3),
                           ),
                           _ProfileStat(
                             value: '28',
                             label: 'Products Sold',
+                            valueFontSize: statValueSize,
+                            labelFontSize: statLabelSize,
                           ),
                           Container(
-                            height: 40,
+                            height: statsDividerHeight,
                             width: 1,
                             color: Colors.white.withOpacity(0.3),
                           ),
                           _ProfileStat(
                             value: '6.5 acres',
                             label: 'Total Land',
+                            valueFontSize: statValueSize,
+                            labelFontSize: statLabelSize,
                           ),
                         ],
                       ),
@@ -1622,12 +1983,56 @@ class ProfileScreen extends StatelessWidget {
                 Expanded(
                   child: Container(
                     color: Colors.white,
-                    child: Column(
+                    child: ListView(
+                      padding: EdgeInsets.zero,
                       children: [
-                        const SizedBox(height: 20),
+                        SizedBox(height: isTinyScreen ? 16 : 20),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: menuHorizontalPadding),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: authState is AuthSuccess && !_isLinkingKhalti
+                                  ? () => _linkSellerKhaltiTestAccount(authState)
+                                  : null,
+                              icon: _isLinkingKhalti
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Icon(Icons.account_balance_wallet_outlined),
+                              label: Text(
+                                _isLinkingKhalti
+                                    ? 'Linking Test Khalti Account...'
+                                    : 'Link Seller Khalti Account (Test)',
+                                style: TextStyle(
+                                  fontSize: isTinyScreen ? 13 : 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryGreen,
+                                foregroundColor: Colors.white,
+                                padding: EdgeInsets.symmetric(vertical: isTinyScreen ? 12 : 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
                         _ProfileMenuItem(
                           icon: Icons.person_outline,
                           title: AppLocalizations.of(context)!.editProfile,
+                          iconSize: menuIconSize,
+                          titleFontSize: menuTitleSize,
+                          horizontalPadding: menuHorizontalPadding,
+                          verticalPadding: menuVerticalPadding,
                           onTap: () {
                             // TODO: Navigate to edit profile
                           },
@@ -1642,6 +2047,10 @@ class ProfileScreen extends StatelessWidget {
                         _ProfileMenuItem(
                           icon: Icons.language,
                           title: AppLocalizations.of(context)!.language,
+                          iconSize: menuIconSize,
+                          titleFontSize: menuTitleSize,
+                          horizontalPadding: menuHorizontalPadding,
+                          verticalPadding: menuVerticalPadding,
                           onTap: () {
                             Navigator.push(
                               context,
@@ -1654,6 +2063,10 @@ class ProfileScreen extends StatelessWidget {
                         _ProfileMenuItem(
                           icon: Icons.settings_outlined,
                           title: AppLocalizations.of(context)!.settings,
+                          iconSize: menuIconSize,
+                          titleFontSize: menuTitleSize,
+                          horizontalPadding: menuHorizontalPadding,
+                          verticalPadding: menuVerticalPadding,
                           onTap: () {
                             // TODO: Navigate to settings
                           },
@@ -1661,17 +2074,20 @@ class ProfileScreen extends StatelessWidget {
                         _ProfileMenuItem(
                           icon: Icons.help_outline,
                           title: AppLocalizations.of(context)!.helpSupport,
+                          iconSize: menuIconSize,
+                          titleFontSize: menuTitleSize,
+                          horizontalPadding: menuHorizontalPadding,
+                          verticalPadding: menuVerticalPadding,
                           onTap: () {
                             // TODO: Navigate to help & support
                           },
                         ),
-                        const Spacer(),
                         // Logout Button
                         Padding(
-                          padding: const EdgeInsets.all(20),
+                          padding: EdgeInsets.all(menuHorizontalPadding),
                           child: SizedBox(
                             width: double.infinity,
-                            height: 56,
+                            height: actionButtonHeight,
                             child: ElevatedButton.icon(
                               onPressed: () {
                                 showDialog(
@@ -1702,7 +2118,7 @@ class ProfileScreen extends StatelessWidget {
                               label: Text(
                                 AppLocalizations.of(context)!.logout,
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: isTinyScreen ? 15 : 16,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -1717,7 +2133,7 @@ class ProfileScreen extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        SizedBox(height: isTinyScreen ? 8 : 10),
                       ],
                     ),
                   ),
@@ -1736,10 +2152,14 @@ class ProfileScreen extends StatelessWidget {
 class _ProfileStat extends StatelessWidget {
   final String value;
   final String label;
+  final double valueFontSize;
+  final double labelFontSize;
 
   const _ProfileStat({
     required this.value,
     required this.label,
+    this.valueFontSize = 22,
+    this.labelFontSize = 12,
   });
 
   @override
@@ -1748,9 +2168,9 @@ class _ProfileStat extends StatelessWidget {
       children: [
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             color: Colors.white,
-            fontSize: 22,
+            fontSize: valueFontSize,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -1759,7 +2179,7 @@ class _ProfileStat extends StatelessWidget {
           label,
           style: TextStyle(
             color: Colors.white.withOpacity(0.8),
-            fontSize: 12,
+            fontSize: labelFontSize,
           ),
         ),
       ],
@@ -1772,11 +2192,19 @@ class _ProfileMenuItem extends StatelessWidget {
   final IconData icon;
   final String title;
   final VoidCallback onTap;
+  final double iconSize;
+  final double titleFontSize;
+  final double horizontalPadding;
+  final double verticalPadding;
 
   const _ProfileMenuItem({
     required this.icon,
     required this.title,
     required this.onTap,
+    this.iconSize = 24,
+    this.titleFontSize = 16,
+    this.horizontalPadding = 20,
+    this.verticalPadding = 16,
   });
 
   @override
@@ -1784,7 +2212,7 @@ class _ProfileMenuItem extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: verticalPadding),
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
@@ -1798,14 +2226,14 @@ class _ProfileMenuItem extends StatelessWidget {
             Icon(
               icon,
               color: AppTheme.primaryGreen,
-              size: 24,
+              size: iconSize,
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 16,
+                style: TextStyle(
+                  fontSize: titleFontSize,
                   fontWeight: FontWeight.w500,
                   color: Colors.black87,
                 ),
@@ -1814,7 +2242,7 @@ class _ProfileMenuItem extends StatelessWidget {
             Icon(
               Icons.chevron_right,
               color: Colors.grey[400],
-              size: 24,
+              size: iconSize,
             ),
           ],
         ),

@@ -78,6 +78,16 @@ class _BuyerChatListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTinyScreen = screenWidth < 360;
+    final headerTitleSize = isTinyScreen ? 20.0 : 24.0;
+    final headerIconSize = isTinyScreen ? 22.0 : 28.0;
+    final headerPadding = isTinyScreen ? 12.0 : 16.0;
+    final avatarRadius = isTinyScreen ? 22.0 : 28.0;
+    final avatarInitialSize = isTinyScreen ? 18.0 : 24.0;
+    final chatNameSize = isTinyScreen ? 14.0 : 16.0;
+    final chatMessageSize = isTinyScreen ? 12.0 : 14.0;
+    final chatItemPadding = isTinyScreen ? 8.0 : 12.0;
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: Column(
@@ -96,19 +106,19 @@ class _BuyerChatListView extends StatelessWidget {
             child: SafeArea(
               bottom: false,
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: EdgeInsets.all(headerPadding),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.chat_bubble,
                       color: Colors.white,
-                      size: 28,
+                      size: headerIconSize,
                     ),
                     const SizedBox(width: 12),
-                    const Text(
+                    Text(
                       'Messages',
                       style: TextStyle(
-                        fontSize: 24,
+                        fontSize: headerTitleSize,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
@@ -122,10 +132,10 @@ class _BuyerChatListView extends StatelessWidget {
                           ),
                         );
                       },
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.search,
                         color: Colors.white,
-                        size: 24,
+                        size: headerIconSize - 4,
                       ),
                     ),
                   ],
@@ -192,7 +202,7 @@ class _BuyerChatListView extends StatelessWidget {
 
                 if (state is ChatRoomsLoaded) {
                   if (state.chatRooms.isEmpty) {
-                    return _buildEmptyState(context);
+                    return _buildEmptyState(context, isTinyScreen);
                   }
 
                   return RefreshIndicator(
@@ -219,13 +229,18 @@ class _BuyerChatListView extends StatelessWidget {
                             chatRoom.lastMessage?.timestamp ?? chatRoom.createdAt,
                           ),
                           chatRoom.unreadCount,
+                          chatItemPadding: chatItemPadding,
+                          avatarRadius: avatarRadius,
+                          avatarInitialSize: avatarInitialSize,
+                          chatNameSize: chatNameSize,
+                          chatMessageSize: chatMessageSize,
                         );
                       },
                     ),
                   );
                 }
 
-                return _buildEmptyState(context);
+                return _buildEmptyState(context, isTinyScreen);
               },
             ),
           ),
@@ -243,6 +258,13 @@ class _BuyerChatListView extends StatelessWidget {
     String lastMessage,
     String timestamp,
     int unreadCount,
+    {
+      required double chatItemPadding,
+      required double avatarRadius,
+      required double avatarInitialSize,
+      required double chatNameSize,
+      required double chatMessageSize,
+    }
   ) {
     final hasUnread = unreadCount > 0;
     
@@ -277,12 +299,12 @@ class _BuyerChatListView extends StatelessWidget {
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(12.0),
+          padding: EdgeInsets.all(chatItemPadding),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CircleAvatar(
-                radius: 28,
+                radius: avatarRadius,
                 backgroundColor: const Color(0xFF2196F3).withOpacity(0.1),
                 backgroundImage: profilePictureUrl != null && profilePictureUrl.isNotEmpty
                     ? NetworkImage(profilePictureUrl)
@@ -290,8 +312,8 @@ class _BuyerChatListView extends StatelessWidget {
                 child: profilePictureUrl == null || profilePictureUrl.isEmpty
                     ? Text(
                         _initialFor(userName),
-                        style: const TextStyle(
-                          fontSize: 24,
+                        style: TextStyle(
+                          fontSize: avatarInitialSize,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF2196F3),
                         ),
@@ -310,7 +332,7 @@ class _BuyerChatListView extends StatelessWidget {
                           child: Text(
                             userName,
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: chatNameSize,
                               fontWeight: hasUnread ? FontWeight.bold : FontWeight.w600,
                               color: Colors.black87,
                             ),
@@ -351,7 +373,7 @@ class _BuyerChatListView extends StatelessWidget {
                           child: Text(
                             lastMessage,
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: chatMessageSize,
                               color: hasUnread ? Colors.black87 : Colors.grey[600],
                               fontWeight: hasUnread ? FontWeight.w500 : FontWeight.normal,
                             ),
@@ -389,21 +411,21 @@ class _BuyerChatListView extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Widget _buildEmptyState(BuildContext context, bool isTinyScreen) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             Icons.chat_bubble_outline,
-            size: 80,
+            size: isTinyScreen ? 60.0 : 80.0,
             color: Colors.grey[400],
           ),
           const SizedBox(height: 16),
           Text(
             'No messages yet',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: isTinyScreen ? 16.0 : 18.0,
               fontWeight: FontWeight.w600,
               color: Colors.grey[600],
             ),

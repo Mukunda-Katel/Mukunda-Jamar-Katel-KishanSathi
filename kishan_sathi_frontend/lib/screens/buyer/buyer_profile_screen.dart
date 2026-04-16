@@ -52,6 +52,36 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
     return AppConfig.getUrl(rawUrl.startsWith('/') ? rawUrl : '/$rawUrl');
   }
 
+  Map<String, dynamic> _safeJsonObject(String rawBody) {
+    if (rawBody.trim().isEmpty) return <String, dynamic>{};
+    try {
+      final decoded = jsonDecode(rawBody);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } catch (_) {
+      // Non-JSON responses are handled by caller.
+    }
+    return <String, dynamic>{};
+  }
+
+  String _buildUploadErrorMessage(http.Response response, Map<String, dynamic> body) {
+    final apiMessage = (body['error'] ?? body['message'])?.toString();
+    if (apiMessage != null && apiMessage.isNotEmpty) {
+      return apiMessage;
+    }
+
+    final compact = response.body.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (compact.toLowerCase().startsWith('<!doctype html') || compact.toLowerCase().startsWith('<html')) {
+      return 'Server returned an HTML error page (status ${response.statusCode}). Please check backend logs.';
+    }
+    if (compact.isEmpty) {
+      return 'Server error (status ${response.statusCode}).';
+    }
+    final preview = compact.length > 180 ? '${compact.substring(0, 180)}...' : compact;
+    return 'Server error (status ${response.statusCode}): $preview';
+  }
+
   Future<void> _loadProfileImageFromServer() async {
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthSuccess) return;
@@ -102,13 +132,14 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
       );
 
       request.headers['Authorization'] = 'Token ${_normalizedToken(token)}';
+      request.headers['Accept'] = 'application/json';
       request.files.add(
         await http.MultipartFile.fromPath('profile_picture', File(pickedFile.path).path),
       );
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
-      final body = response.body.isNotEmpty ? jsonDecode(response.body) : <String, dynamic>{};
+      final body = _safeJsonObject(response.body);
 
       if (response.statusCode == 200) {
         final user = body['user'] as Map<String, dynamic>?;
@@ -128,10 +159,11 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
           ),
         );
       } else {
+        final errorMessage = _buildUploadErrorMessage(response, body);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text((body['error'] ?? body['message'] ?? 'Failed to update profile picture.').toString()),
+            content: Text(errorMessage),
             backgroundColor: Colors.red,
           ),
         );
@@ -157,7 +189,14 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final screenWidth = MediaQuery.of(context).size.width;
-    final horizontalPadding = screenWidth < 600 ? 16.0 : 24.0;
+    final isTinyScreen = screenWidth < 360;
+    final isSmallScreen = screenWidth < 600;
+    final horizontalPadding = isTinyScreen ? 12.0 : (isSmallScreen ? 16.0 : 24.0);
+    final avatarSize = isTinyScreen ? 80.0 : (isSmallScreen ? 90.0 : 100.0);
+    final nameSize = isTinyScreen ? 20.0 : 24.0;
+    final titleSize = isTinyScreen ? 20.0 : 24.0;
+    final statValueSize = isTinyScreen ? 18.0 : 22.0;
+    final statLabelSize = isTinyScreen ? 10.0 : 12.0;
 
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
@@ -196,19 +235,19 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                             alignment: Alignment.centerLeft,
                             child: Text(
                               l10n.profile,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 24,
+                                fontSize: titleSize,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          SizedBox(height: isTinyScreen ? 16 : 24),
                           Stack(
                             children: [
                               Container(
-                                width: 100,
-                                height: 100,
+                                width: avatarSize,
+                                height: avatarSize,
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   shape: BoxShape.circle,
@@ -276,9 +315,9 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                           const SizedBox(height: 14),
                           Text(
                             user?.fullName ?? l10n.buyer,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: Colors.white,
-                              fontSize: 24,
+                              fontSize: nameSize,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -478,13 +517,16 @@ class _ProfileStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTinyScreen = screenWidth < 360;
+
     return Column(
       children: [
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             color: Colors.white,
-            fontSize: 22,
+            fontSize: isTinyScreen ? 18.0 : 22.0,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -493,10 +535,11 @@ class _ProfileStat extends StatelessWidget {
           label,
           style: TextStyle(
             color: Colors.white.withOpacity(0.9),
-            fontSize: 12,
+            fontSize: isTinyScreen ? 10.0 : 12.0,
           ),
         ),
       ],
     );
   }
 }
+

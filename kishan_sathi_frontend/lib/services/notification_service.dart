@@ -4,7 +4,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../core/constants/api_constants.dart';
 
 /// Background message handler must be a top-level function
 @pragma('vm:entry-point')
@@ -24,6 +25,7 @@ class NotificationService {
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
   String? _fcmToken;
   String? get fcmToken => _fcmToken;
@@ -233,8 +235,7 @@ class NotificationService {
   /// Send FCM token to backend
   Future<void> _sendTokenToBackend(String token) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final authToken = prefs.getString('auth_token');
+      final authToken = await _secureStorage.read(key: 'auth_token');
 
       if (authToken == null || authToken.isEmpty) {
         if (kDebugMode) {
@@ -243,12 +244,8 @@ class NotificationService {
         return;
       }
 
-      const baseUrl = 'http://10.0.2.2:8000'; // Android emulator
-      // Use 'http://localhost:8000' for iOS simulator
-      // Use your actual IP for physical device
-
       final response = await http.post(
-        Uri.parse('$baseUrl/api/auth/fcm-token/'),
+        Uri.parse('${ApiConstants.apiBaseUrl}/auth/fcm-token/'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Token $authToken',

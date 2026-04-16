@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../../../core/constants/api_constants.dart';
 import '../models/notification_model.dart';
 
 class NotificationService {
-  final String baseUrl = 'https://mukunda-jamar-katel-kishansathi.onrender.com/api/notifications';
+  final String baseUrl = '${ApiConstants.apiBaseUrl}/notifications';
 
   Future<List<NotificationModel>> getNotifications({
     required String token,

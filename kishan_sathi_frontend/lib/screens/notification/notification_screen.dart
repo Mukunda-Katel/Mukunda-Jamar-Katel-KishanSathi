@@ -19,6 +19,12 @@ class NotificationScreen extends StatefulWidget {
 class _NotificationScreenState extends State<NotificationScreen> {
   String? _selectedFilter = 'all'; // all, unread, read
 
+  String _initialFromName(String? name) {
+    final trimmed = (name ?? '').trim();
+    if (trimmed.isEmpty) return '?';
+    return trimmed[0].toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -290,25 +296,60 @@ class _NotificationScreenState extends State<NotificationScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Icon
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: _getNotificationColor(notification.type).withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    _getNotificationIcon(notification.type),
-                    color: _getNotificationColor(notification.type),
-                    size: 24,
-                  ),
-                ),
+                // Actor avatar or type icon fallback
+                (notification.actorProfilePictureUrl != null &&
+                        notification.actorProfilePictureUrl!.isNotEmpty)
+                    ? CircleAvatar(
+                        radius: 22,
+                        backgroundColor: Colors.grey[200],
+                        backgroundImage:
+                            NetworkImage(notification.actorProfilePictureUrl!),
+                      )
+                    : (notification.actorName != null &&
+                            notification.actorName!.trim().isNotEmpty)
+                        ? CircleAvatar(
+                            radius: 22,
+                            backgroundColor:
+                                _getNotificationColor(notification.type),
+                            child: Text(
+                              _initialFromName(notification.actorName),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          )
+                        : Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: _getNotificationColor(notification.type)
+                                  .withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              _getNotificationIcon(notification.type),
+                              color: _getNotificationColor(notification.type),
+                              size: 24,
+                            ),
+                          ),
                 const SizedBox(width: 12),
                 // Content
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (notification.actorName != null &&
+                          notification.actorName!.trim().isNotEmpty) ...[
+                        Text(
+                          notification.actorName!,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[700],
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                      ],
                       Row(
                         children: [
                           Expanded(

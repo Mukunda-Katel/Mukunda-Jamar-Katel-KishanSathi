@@ -160,7 +160,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
       'image_path': _imageFile?.path,
     };
 
-    print('Product data being sent: $productData');
     _productBloc.add(CreateProduct(authState.token, productData));
   }
 
@@ -178,6 +177,29 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+
+    final isTinyScreen = screenWidth < 360;
+    final isSmallScreen = screenWidth < 600;
+    final isNarrowFields = screenWidth < 420;
+
+    final horizontalPadding = isTinyScreen ? 12.0 : (isSmallScreen ? 16.0 : 20.0);
+    final fieldSpacing = isTinyScreen ? 12.0 : 16.0;
+    final sectionSpacing = isTinyScreen ? 20.0 : 24.0;
+    final submitTopSpacing = isTinyScreen ? 28.0 : 32.0;
+    final submitBottomSpacing = isTinyScreen ? 16.0 : 20.0;
+
+    final fieldRadius = isTinyScreen ? 10.0 : 12.0;
+    final fieldPadding = isTinyScreen ? 14.0 : 16.0;
+    final imageHeight = isTinyScreen ? 170.0 : (isSmallScreen ? 190.0 : 210.0);
+    final imageIconSize = isTinyScreen ? 52.0 : 64.0;
+    final imageHintSize = isTinyScreen ? 13.0 : 14.0;
+    final imageLabelSpacing = isTinyScreen ? 6.0 : 8.0;
+    final fieldIconSize = isTinyScreen ? 20.0 : 24.0;
+    final fieldLabelSize = isTinyScreen ? 14.0 : 16.0;
+    final submitFontSize = isTinyScreen ? 16.0 : 18.0;
+
     return BlocProvider.value(
       value: _productBloc,
       child: BlocListener<ProductBloc, ProductState>(
@@ -221,15 +243,21 @@ class _AddProductScreenState extends State<AddProductScreen> {
               return Stack(
                 children: [
                   SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
+                    padding: EdgeInsets.all(horizontalPadding),
                     child: Form(
                       key: _formKey,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           // Image Picker
-                          _buildImagePicker(),
-                          const SizedBox(height: 24),
+                          _buildImagePicker(
+                            height: imageHeight,
+                            borderRadius: fieldRadius + 4,
+                            iconSize: imageIconSize,
+                            hintFontSize: imageHintSize,
+                            labelSpacing: imageLabelSpacing,
+                          ),
+                          SizedBox(height: sectionSpacing),
 
                           // Product Name
                           _buildTextField(
@@ -237,6 +265,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             label: 'Product Name',
                             hint: 'e.g., Fresh Tomatoes',
                             icon: Icons.shopping_basket,
+                            borderRadius: fieldRadius,
+                            iconSize: fieldIconSize,
+                            textSize: fieldLabelSize,
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Please enter product name';
@@ -244,11 +275,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: fieldSpacing),
 
                           // Category Dropdown
-                          _buildCategoryDropdown(),
-                          const SizedBox(height: 16),
+                          _buildCategoryDropdown(
+                            horizontalPadding: fieldPadding,
+                            borderRadius: fieldRadius,
+                            iconSize: fieldIconSize,
+                            textSize: fieldLabelSize,
+                          ),
+                          SizedBox(height: fieldSpacing),
 
                           // Description
                           _buildTextField(
@@ -257,6 +293,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             hint: 'Describe your product...',
                             icon: Icons.description,
                             maxLines: 4,
+                            borderRadius: fieldRadius,
+                            iconSize: fieldIconSize,
+                            textSize: fieldLabelSize,
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Please enter description';
@@ -264,55 +303,110 @@ class _AddProductScreenState extends State<AddProductScreen> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: fieldSpacing),
 
                           // Price and Quantity Row
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildTextField(
-                                  controller: _priceController,
-                                  label: 'Price (Rs.)',
-                                  hint: '0.00',
-                                  icon: Icons.currency_rupee,
-                                  keyboardType: TextInputType.number,
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return 'Required';
-                                    }
-                                    if (double.tryParse(value) == null) {
-                                      return 'Invalid';
-                                    }
-                                    return null;
-                                  },
+                          isNarrowFields
+                              ? Column(
+                                  children: [
+                                    _buildTextField(
+                                      controller: _priceController,
+                                      label: 'Price (Rs.)',
+                                      hint: '0.00',
+                                      icon: Icons.currency_rupee,
+                                      keyboardType: TextInputType.number,
+                                      borderRadius: fieldRadius,
+                                      iconSize: fieldIconSize,
+                                      textSize: fieldLabelSize,
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'Required';
+                                        }
+                                        if (double.tryParse(value) == null) {
+                                          return 'Invalid';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                    SizedBox(height: fieldSpacing),
+                                    _buildTextField(
+                                      controller: _quantityController,
+                                      label: 'Quantity',
+                                      hint: '0',
+                                      icon: Icons.inventory,
+                                      keyboardType: TextInputType.number,
+                                      borderRadius: fieldRadius,
+                                      iconSize: fieldIconSize,
+                                      textSize: fieldLabelSize,
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'Required';
+                                        }
+                                        if (double.tryParse(value) == null) {
+                                          return 'Invalid';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ],
+                                )
+                              : Row(
+                                  children: [
+                                    Expanded(
+                                      child: _buildTextField(
+                                        controller: _priceController,
+                                        label: 'Price (Rs.)',
+                                        hint: '0.00',
+                                        icon: Icons.currency_rupee,
+                                        keyboardType: TextInputType.number,
+                                        borderRadius: fieldRadius,
+                                        iconSize: fieldIconSize,
+                                        textSize: fieldLabelSize,
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return 'Required';
+                                          }
+                                          if (double.tryParse(value) == null) {
+                                            return 'Invalid';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                    ),
+                                    SizedBox(width: isTinyScreen ? 10 : 12),
+                                    Expanded(
+                                      child: _buildTextField(
+                                        controller: _quantityController,
+                                        label: 'Quantity',
+                                        hint: '0',
+                                        icon: Icons.inventory,
+                                        keyboardType: TextInputType.number,
+                                        borderRadius: fieldRadius,
+                                        iconSize: fieldIconSize,
+                                        textSize: fieldLabelSize,
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return 'Required';
+                                          }
+                                          if (double.tryParse(value) == null) {
+                                            return 'Invalid';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _buildTextField(
-                                  controller: _quantityController,
-                                  label: 'Quantity',
-                                  hint: '0',
-                                  icon: Icons.inventory,
-                                  keyboardType: TextInputType.number,
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return 'Required';
-                                    }
-                                    if (double.tryParse(value) == null) {
-                                      return 'Invalid';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: fieldSpacing),
 
                           // Unit Dropdown
-                          _buildUnitDropdown(),
-                          const SizedBox(height: 16),
+                          _buildUnitDropdown(
+                            horizontalPadding: fieldPadding,
+                            borderRadius: fieldRadius,
+                            iconSize: fieldIconSize,
+                            textSize: fieldLabelSize,
+                          ),
+                          SizedBox(height: fieldSpacing),
 
                           // Location
                           _buildTextField(
@@ -320,6 +414,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             label: 'Location',
                             hint: 'Farm location or village',
                             icon: Icons.location_on,
+                            borderRadius: fieldRadius,
+                            iconSize: fieldIconSize,
+                            textSize: fieldLabelSize,
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Please enter location';
@@ -327,7 +424,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: fieldSpacing),
 
                           // District
                           _buildTextField(
@@ -335,6 +432,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             label: 'District',
                             hint: 'e.g., Kathmandu',
                             icon: Icons.map,
+                            borderRadius: fieldRadius,
+                            iconSize: fieldIconSize,
+                            textSize: fieldLabelSize,
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Please enter district';
@@ -342,15 +442,25 @@ class _AddProductScreenState extends State<AddProductScreen> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: fieldSpacing),
 
                           // Harvest Date
-                          _buildHarvestDatePicker(),
-                          const SizedBox(height: 16),
+                          _buildHarvestDatePicker(
+                            padding: fieldPadding,
+                            borderRadius: fieldRadius,
+                            iconSize: fieldIconSize,
+                            textSize: fieldLabelSize,
+                          ),
+                          SizedBox(height: fieldSpacing),
 
                           // Organic Switch
-                          _buildOrganicSwitch(),
-                          const SizedBox(height: 32),
+                          _buildOrganicSwitch(
+                            padding: fieldPadding,
+                            borderRadius: fieldRadius,
+                            iconSize: fieldIconSize,
+                            textSize: fieldLabelSize,
+                          ),
+                          SizedBox(height: submitTopSpacing),
 
                           // Submit Button
                           ElevatedButton(
@@ -358,21 +468,23 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.primaryGreen,
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              padding: EdgeInsets.symmetric(
+                                vertical: isTinyScreen ? 14 : 16,
+                              ),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(fieldRadius),
                               ),
                               elevation: 2,
                             ),
                             child: Text(
                               isLoading ? 'Adding Product...' : 'Add Product',
-                              style: const TextStyle(
-                                fontSize: 18,
+                              style: TextStyle(
+                                fontSize: submitFontSize,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 20),
+                          SizedBox(height: submitBottomSpacing),
                         ],
                       ),
                     ),
@@ -395,19 +507,25 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 
-  Widget _buildImagePicker() {
+  Widget _buildImagePicker({
+    required double height,
+    required double borderRadius,
+    required double iconSize,
+    required double hintFontSize,
+    required double labelSpacing,
+  }) {
     return GestureDetector(
       onTap: _pickImage,
       child: Container(
-        height: 200,
+        height: height,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(borderRadius),
           border: Border.all(color: Colors.grey[300]!),
         ),
         child: _imageFile != null
             ? ClipRRect(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(borderRadius),
                 child: Image.file(
                   _imageFile!,
                   fit: BoxFit.cover,
@@ -416,11 +534,18 @@ class _AddProductScreenState extends State<AddProductScreen> {
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.add_photo_alternate, size: 64, color: Colors.grey[400]),
-                  const SizedBox(height: 8),
+                  Icon(
+                    Icons.add_photo_alternate,
+                    size: iconSize,
+                    color: Colors.grey[400],
+                  ),
+                  SizedBox(height: labelSpacing),
                   Text(
                     'Tap to add product image',
-                    style: TextStyle(color: Colors.grey[600]),
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: hintFontSize,
+                    ),
                   ),
                 ],
               ),
@@ -435,26 +560,32 @@ class _AddProductScreenState extends State<AddProductScreen> {
     required IconData icon,
     int maxLines = 1,
     TextInputType? keyboardType,
+    double borderRadius = 12,
+    double iconSize = 24,
+    double textSize = 16,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: controller,
+      style: TextStyle(fontSize: textSize),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        prefixIcon: Icon(icon, color: AppTheme.primaryGreen),
+        labelStyle: TextStyle(fontSize: textSize),
+        hintStyle: TextStyle(fontSize: textSize - 1),
+        prefixIcon: Icon(icon, color: AppTheme.primaryGreen, size: iconSize),
         filled: true,
         fillColor: Colors.white,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(borderRadius),
           borderSide: BorderSide(color: Colors.grey[300]!),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(borderRadius),
           borderSide: BorderSide(color: Colors.grey[300]!),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(borderRadius),
           borderSide: const BorderSide(color: AppTheme.primaryGreen, width: 2),
         ),
       ),
@@ -464,12 +595,17 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 
-  Widget _buildCategoryDropdown() {
+  Widget _buildCategoryDropdown({
+    required double horizontalPadding,
+    required double borderRadius,
+    required double iconSize,
+    required double textSize,
+  }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(color: Colors.grey[300]!),
       ),
       child: _isLoadingCategories
@@ -480,24 +616,29 @@ class _AddProductScreenState extends State<AddProductScreen> {
           : DropdownButtonHideUnderline(
               child: DropdownButton<int>(
                 value: _selectedCategoryId,
-                hint: const Row(
+                hint: Row(
                   children: [
-                    Icon(Icons.category, color: AppTheme.primaryGreen),
-                    SizedBox(width: 12),
-                    Text('Select Category'),
+                    Icon(Icons.category, color: AppTheme.primaryGreen, size: iconSize),
+                    SizedBox(width: textSize < 15 ? 10 : 12),
+                    Text(
+                      'Select Category',
+                      style: TextStyle(fontSize: textSize),
+                    ),
                   ],
                 ),
                 isExpanded: true,
                 items: _categories.map((category) {
                   return DropdownMenuItem<int>(
                     value: category['id'] as int,
-                    child: Text(category['name'] as String),
+                    child: Text(
+                      category['name'] as String,
+                      style: TextStyle(fontSize: textSize),
+                    ),
                   );
                 }).toList(),
                 onChanged: (value) {
                   setState(() {
                     _selectedCategoryId = value;
-                    print('Selected category ID: $value'); // Debug log
                   });
                 },
               ),
@@ -505,27 +646,35 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 
-  Widget _buildUnitDropdown() {
+  Widget _buildUnitDropdown({
+    required double horizontalPadding,
+    required double borderRadius,
+    required double iconSize,
+    required double textSize,
+  }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(color: Colors.grey[300]!),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: _selectedUnit,
           isExpanded: true,
-          icon: const Icon(Icons.arrow_drop_down, color: AppTheme.primaryGreen),
+          icon: Icon(Icons.arrow_drop_down, color: AppTheme.primaryGreen, size: iconSize),
           items: _units.map((unit) {
             return DropdownMenuItem<String>(
               value: unit['value'],
               child: Row(
                 children: [
-                  const Icon(Icons.straighten, color: AppTheme.primaryGreen),
-                  const SizedBox(width: 12),
-                  Text(unit['label']!),
+                  Icon(Icons.straighten, color: AppTheme.primaryGreen, size: iconSize),
+                  SizedBox(width: textSize < 15 ? 10 : 12),
+                  Text(
+                    unit['label']!,
+                    style: TextStyle(fontSize: textSize),
+                  ),
                 ],
               ),
             );
@@ -542,27 +691,34 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 
-  Widget _buildHarvestDatePicker() {
+  Widget _buildHarvestDatePicker({
+    required double padding,
+    required double borderRadius,
+    required double iconSize,
+    required double textSize,
+  }) {
     return GestureDetector(
       onTap: _selectHarvestDate,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(padding),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(borderRadius),
           border: Border.all(color: Colors.grey[300]!),
         ),
         child: Row(
           children: [
-            const Icon(Icons.calendar_today, color: AppTheme.primaryGreen),
-            const SizedBox(width: 12),
-            Text(
-              _harvestDate != null
-                  ? 'Harvest Date: ${DateFormat('MMM dd, yyyy').format(_harvestDate!)}'
-                  : 'Select Harvest Date (Optional)',
-              style: TextStyle(
-                color: _harvestDate != null ? Colors.black : Colors.grey[600],
-                fontSize: 16,
+            Icon(Icons.calendar_today, color: AppTheme.primaryGreen, size: iconSize),
+            SizedBox(width: textSize < 15 ? 10 : 12),
+            Expanded(
+              child: Text(
+                _harvestDate != null
+                    ? 'Harvest Date: ${DateFormat('MMM dd, yyyy').format(_harvestDate!)}'
+                    : 'Select Harvest Date (Optional)',
+                style: TextStyle(
+                  color: _harvestDate != null ? Colors.black : Colors.grey[600],
+                  fontSize: textSize,
+                ),
               ),
             ),
           ],
@@ -571,22 +727,27 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 
-  Widget _buildOrganicSwitch() {
+  Widget _buildOrganicSwitch({
+    required double padding,
+    required double borderRadius,
+    required double iconSize,
+    required double textSize,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(color: Colors.grey[300]!),
       ),
       child: Row(
         children: [
-          const Icon(Icons.eco, color: AppTheme.primaryGreen),
-          const SizedBox(width: 12),
-          const Expanded(
+          Icon(Icons.eco, color: AppTheme.primaryGreen, size: iconSize),
+          SizedBox(width: textSize < 15 ? 10 : 12),
+          Expanded(
             child: Text(
               'Organic Product',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              style: TextStyle(fontSize: textSize, fontWeight: FontWeight.w500),
             ),
           ),
           Switch(

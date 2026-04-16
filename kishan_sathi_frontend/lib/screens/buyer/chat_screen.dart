@@ -174,6 +174,14 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTinyScreen = screenWidth < 360;
+    final appBarAvatarRadius = isTinyScreen ? 16.0 : 20.0;
+    final appBarNameSize = isTinyScreen ? 14.0 : 16.0;
+    final appBarRoleSize = isTinyScreen ? 10.0 : 12.0;
+    final inputIconSize = isTinyScreen ? 22.0 : 28.0;
+    final sendBtnPadding = isTinyScreen ? 10.0 : 12.0;
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -186,7 +194,7 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
         title: Row(
           children: [
             CircleAvatar(
-              radius: 20,
+              radius: appBarAvatarRadius,
               backgroundColor: Colors.white,
               backgroundImage: widget.profileImageUrl != null && widget.profileImageUrl!.isNotEmpty
                   ? NetworkImage(widget.profileImageUrl!)
@@ -209,8 +217,8 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
                 children: [
                   Text(
                     widget.userName,
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style: TextStyle(
+                      fontSize: appBarNameSize,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),
@@ -219,7 +227,7 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
                   Text(
                     widget.userRole,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: appBarRoleSize,
                       color: Colors.white.withOpacity(0.9),
                     ),
                   ),
@@ -504,7 +512,7 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
                           icon: Icon(
                             Icons.image,
                             color: AppTheme.primaryGreen,
-                            size: 28,
+                            size: inputIconSize,
                           ),
                         ),
 
@@ -542,15 +550,15 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
                         GestureDetector(
                           onTap: _sendMessage,
                           child: Container(
-                            padding: const EdgeInsets.all(12),
+                            padding: EdgeInsets.all(sendBtnPadding),
                             decoration: BoxDecoration(
                               color: AppTheme.primaryGreen,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.send,
                               color: Colors.white,
-                              size: 20,
+                              size: isTinyScreen ? 16.0 : 20.0,
                             ),
                           ),
                         ),
@@ -572,6 +580,10 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
     final isSent = message.sender.id == _currentUserId;
     final hasImage = message.image != null && message.image!.isNotEmpty;
     final hasText = message.content.isNotEmpty;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTinyScreen = screenWidth < 360;
+    final maxBubbleWidth = screenWidth * 0.75;
+    final chatImageHeight = isTinyScreen ? 150.0 : 200.0;
     
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -600,7 +612,9 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
             const SizedBox(width: 8),
           ],
           Flexible(
-            child: Container(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxBubbleWidth),
+              child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
                 color: isSent ? AppTheme.primaryGreen : Colors.white,
@@ -630,7 +644,7 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
                         loadingBuilder: (context, child, loadingProgress) {
                           if (loadingProgress == null) return child;
                           return Container(
-                            height: 200,
+                            height: MediaQuery.of(context).size.height * 0.25,
                             alignment: Alignment.center,
                             child: CircularProgressIndicator(
                               value: loadingProgress.expectedTotalBytes != null
@@ -643,7 +657,7 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
                         },
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
-                            height: 200,
+                            height: chatImageHeight,
                             alignment: Alignment.center,
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -702,6 +716,7 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
                 ],
               ),
             ),
+          ),
           ),
           if (isSent) const SizedBox(width: 8),
         ],

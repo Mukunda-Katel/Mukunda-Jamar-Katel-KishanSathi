@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../../../core/constants/api_constants.dart';
 
 /// AI Chatbot Service using Django Backend
 /// 
@@ -17,15 +19,48 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// - Government schemes guidance
 /// - Supports English and Nepali languages
 class ChatbotService {
-  static const String chatUrl = 'https://mukunda-jamar-katel-kishansathi.onrender.com/api/ai/chat/';
-  static const String historyUrl = 'https://mukunda-jamar-katel-kishansathi.onrender.com/api/ai/history/';
-  static const String clearHistoryUrl = 'https://mukunda-jamar-katel-kishansathi.onrender.com/api/ai/history/clear/';
+  static const String chatUrl = '${ApiConstants.apiBaseUrl}/ai/chat/';
+  static const String historyUrl = '${ApiConstants.apiBaseUrl}/ai/history/';
+  static const String clearHistoryUrl = '${ApiConstants.apiBaseUrl}/ai/history/clear/';
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
+
+  Future<String?> _readAuthToken() {
+    return _secureStorage.read(key: 'auth_token');
+  }
+
+  String _extractBackendError(http.Response response) {
+    try {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic>) {
+        final error = data['error']?.toString();
+        final details = data['details']?.toString();
+
+        if (response.statusCode == 429 || response.statusCode == 503) {
+          return 'AI assistant is temporarily busy due to provider limits. Please wait about a minute and try again.';
+        }
+
+        if (error != null && error.isNotEmpty) {
+          if (details != null && details.isNotEmpty) {
+            return '$error\n$details';
+          }
+          return error;
+        }
+      }
+    } catch (_) {
+      // Fall through to generic status message when response is not JSON.
+    }
+
+    if (response.statusCode == 429 || response.statusCode == 503) {
+      return 'AI assistant is temporarily busy due to provider limits. Please wait about a minute and try again.';
+    }
+
+    return 'Backend error: ${response.statusCode}';
+  }
 
   Future<String> sendMessage(String message, List<Map<String, String>> conversationHistory) async {
     try {
       // Get authentication token
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
+      final token = await _readAuthToken();
 
       if (token == null) {
         throw Exception('User not authenticated');
@@ -56,19 +91,22 @@ class ChatbotService {
       } else if (response.statusCode == 401) {
         throw Exception('Authentication failed. Please login again.');
       } else {
-        final data = jsonDecode(response.body);
-        throw Exception(data['error'] ?? 'Backend error: ${response.statusCode}');
+        throw Exception(_extractBackendError(response));
       }
+    } on TimeoutException {
+      throw Exception('AI request timed out. Please try again.');
+    } on Exception catch (e) {
+      final cleanMessage = e.toString().replaceFirst('Exception: ', '').trim();
+      throw Exception(cleanMessage);
     } catch (e) {
       print('Exception in sendMessage: $e');
-      throw Exception('Failed to communicate with AI: $e');
+      throw Exception('Failed to communicate with AI service. Please try again.');
     }
   }
 
   Future<List<Map<String, dynamic>>> getChatHistory({int limit = 50}) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
+      final token = await _readAuthToken();
 
       if (token == null) {
         throw Exception('User not authenticated');
@@ -100,8 +138,7 @@ class ChatbotService {
 
   Future<void> clearChatHistory() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
+      final token = await _readAuthToken();
 
       if (token == null) {
         throw Exception('User not authenticated');

@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../../../core/constants/api_constants.dart';
 import '../models/cart_model.dart';
 
 class CartService {
-  final String baseUrl = 'https://mukunda-jamar-katel-kishansathi.onrender.com/api/buyer/cart';
+  final String baseUrl = '${ApiConstants.apiBaseUrl}/buyer/cart';
 
   Future<Cart> getCart(String token) async {
     final response = await http.get(
