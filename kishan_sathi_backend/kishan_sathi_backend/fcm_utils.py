@@ -147,7 +147,79 @@ def send_consultation_rejected_notification(farmer):
     return send_push_notification(farmer.fcm_token, title, body, data)
 
 
-def send_new_message_notification(recipient, sender_name):
+def send_consultation_request_notification(
+    recipient,
+    farmer_name,
+    consultation_request_id=None,
+    message_preview=None,
+):
+    """
+    Send notification to consultant/doctor when a new consultation request arrives.
+
+    Args:
+        recipient: User object (consultant/doctor)
+        farmer_name: Name of the farmer who requested consultation
+        consultation_request_id: Optional consultation request id
+        message_preview: Optional request message preview
+
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    title = "New consultation request"
+    preview = (message_preview or "").strip()
+    if len(preview) > 120:
+        preview = f"{preview[:120]}..."
+
+    if preview:
+        body = f"{farmer_name}: {preview}"
+    else:
+        body = f"{farmer_name} has requested a consultation."
+
+    # Persist notification for in-app notification screen.
+    try:
+        from notifications.models import Notification
+
+        Notification.objects.create(
+            user=recipient,
+            type='consultation',
+            title=title,
+            message=body,
+            reference_id=consultation_request_id,
+            reference_type='consultation_request'
+            if consultation_request_id is not None
+            else 'consultation',
+        )
+    except Exception as exc:
+        logger.warning(
+            "Failed to persist in-app consultation notification for user_id=%s: %s",
+            getattr(recipient, 'id', 'unknown'),
+            exc,
+        )
+
+    if not recipient.fcm_token:
+        logger.warning(f"User {recipient.email} has no FCM token")
+        return False
+
+    data = {
+        "type": "consultation_request",
+        "farmer_name": str(farmer_name),
+    }
+
+    if consultation_request_id is not None:
+        data["consultation_request_id"] = str(consultation_request_id)
+    if preview:
+        data["message_preview"] = preview
+
+    return send_push_notification(recipient.fcm_token, title, body, data)
+
+
+def send_new_message_notification(
+    recipient,
+    sender_name,
+    chat_room_id=None,
+    sender_id=None,
+    message_preview=None,
+):
     """
     Send notification for new chat message
     
@@ -158,15 +230,46 @@ def send_new_message_notification(recipient, sender_name):
     Returns:
         bool: True if successful, False otherwise
     """
+    title = f"New message from {sender_name}"
+    preview = (message_preview or "").strip()
+    if len(preview) > 80:
+        preview = f"{preview[:80]}..."
+
+    body = preview if preview else "You have a new message"
+
+    # Persist notification for in-app notification screen.
+    try:
+        from notifications.models import Notification
+
+        Notification.objects.create(
+            user=recipient,
+            type='chat',
+            title=title,
+            message=body,
+            reference_id=chat_room_id,
+            reference_type='chat_room' if chat_room_id is not None else 'chat',
+        )
+    except Exception as exc:
+        logger.warning(
+            "Failed to persist in-app chat notification for user_id=%s: %s",
+            getattr(recipient, 'id', 'unknown'),
+            exc,
+        )
+
     if not recipient.fcm_token:
         logger.warning(f"User {recipient.email} has no FCM token")
         return False
-    
-    title = f"New message from {sender_name}"
-    body = "You have a new message"
+
     data = {
         "type": "new_message",
-        "sender_name": sender_name,
+        "sender_name": str(sender_name),
     }
+
+    if chat_room_id is not None:
+        data["chat_room_id"] = str(chat_room_id)
+    if sender_id is not None:
+        data["sender_id"] = str(sender_id)
+    if preview:
+        data["message_preview"] = preview
     
     return send_push_notification(recipient.fcm_token, title, body, data)

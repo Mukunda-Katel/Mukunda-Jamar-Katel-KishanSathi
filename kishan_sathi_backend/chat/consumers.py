@@ -174,6 +174,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 send_new_message_notification(
                     recipient=recipient,
                     sender_name=self.user.full_name,
+                    chat_room_id=chat_room.id,
+                    sender_id=self.user.id,
+                    message_preview=message.content,
                 )
             except Exception as exc:
                 logger.warning(

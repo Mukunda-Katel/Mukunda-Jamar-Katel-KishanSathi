@@ -4,12 +4,20 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from django.db.models import Q
+import logging
 
 from .models import ConsultationRequest
 from .serializers import ConsultationRequestSerializer, DoctorSerializer
 from Users.models import User
 from chat.models import ChatRoom
-from kishan_sathi_backend.fcm_utils import send_consultation_approved_notification, send_consultation_rejected_notification
+from kishan_sathi_backend.fcm_utils import (
+    send_consultation_approved_notification,
+    send_consultation_rejected_notification,
+    send_consultation_request_notification,
+)
+
+
+logger = logging.getLogger(__name__)
 
 
 class ApprovedDoctorViewSet(viewsets.ReadOnlyModelViewSet):
@@ -52,9 +60,25 @@ class ConsultationRequestViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
+        consultation_request = serializer.save()
+
+        # Send push + in-app notification to consultant/doctor.
+        try:
+            send_consultation_request_notification(
+                recipient=consultation_request.doctor,
+                farmer_name=request.user.full_name,
+                consultation_request_id=consultation_request.id,
+                message_preview=consultation_request.message,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Failed to send consultation request notification for request_id=%s: %s",
+                consultation_request.id,
+                exc,
+            )
         
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        output = self.get_serializer(consultation_request)
+        return Response(output.data, status=status.HTTP_201_CREATED)
     
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
@@ -101,7 +125,7 @@ class ConsultationRequestViewSet(viewsets.ModelViewSet):
             send_consultation_approved_notification(consultation_request.farmer)
         except Exception as e:
             # Log error but don't fail the request
-            print(f"Failed to send push notification: {e}")
+            logger.warning("Failed to send consultation approved push notification: %s", e)
         
         serializer = self.get_serializer(consultation_request)
         return Response(serializer.data)
@@ -137,7 +161,7 @@ class ConsultationRequestViewSet(viewsets.ModelViewSet):
             send_consultation_rejected_notification(consultation_request.farmer)
         except Exception as e:
             # Log error but don't fail the request
-            print(f"Failed to send push notification: {e}")
+            logger.warning("Failed to send consultation rejected push notification: %s", e)
         
         serializer = self.get_serializer(consultation_request)
         return Response(serializer.data)

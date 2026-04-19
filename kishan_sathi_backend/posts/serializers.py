@@ -92,16 +92,17 @@ class PostSerializer(serializers.ModelSerializer):
     
     def get_author_is_doctor(self, obj):
         """Check if author is a verified doctor"""
-        if obj.author and obj.author.role == 'doctor':
-            # Check if doctor is approved
-            from Users.models import Doctor
-            try:
-                doctor = Doctor.objects.get(user=obj.author)
-                return doctor.doctor_status == 'approved'
-            except Doctor.DoesNotExist:
-                return False
-        return False
-        return False
+        if not obj.author:
+            return False
+
+        # Doctor data now lives on the User model itself.
+        return (
+            obj.author.role == 'doctor'
+            and (
+                obj.author.doctor_status == 'approved'
+                or bool(obj.author.is_doctor_verified)
+            )
+        )
     
     def to_representation(self, instance):
         """Convert image to full URL in response"""

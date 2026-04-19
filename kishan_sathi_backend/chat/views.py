@@ -155,14 +155,18 @@ class MessageViewSet(viewsets.ModelViewSet):
             )
         
         message = serializer.save(sender=request.user)
-        self._send_chat_push_notifications(chat_room=chat_room, sender=request.user)
+        self._send_chat_push_notifications(
+            chat_room=chat_room,
+            sender=request.user,
+            message_content=message.content,
+        )
         
         return Response(
             MessageSerializer(message, context={'request': request}).data,
             status=status.HTTP_201_CREATED
         )
 
-    def _send_chat_push_notifications(self, *, chat_room, sender):
+    def _send_chat_push_notifications(self, *, chat_room, sender, message_content=None):
         """Send push notification to other room participants when a message arrives."""
         recipients = chat_room.participants.exclude(id=sender.id)
 
@@ -171,6 +175,9 @@ class MessageViewSet(viewsets.ModelViewSet):
                 send_new_message_notification(
                     recipient=recipient,
                     sender_name=sender.full_name,
+                    chat_room_id=chat_room.id,
+                    sender_id=sender.id,
+                    message_preview=message_content,
                 )
             except Exception as exc:
                 logger.warning(
