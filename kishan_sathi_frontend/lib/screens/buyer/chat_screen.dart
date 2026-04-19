@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7,6 +8,7 @@ import '../../features/auth/presentation/bloc/auth_state.dart';
 import '../../features/chat/presentation/bloc/chat_bloc.dart';
 import '../../features/chat/presentation/bloc/chat_event.dart';
 import '../../features/chat/presentation/bloc/chat_state.dart';
+import '../../features/chat/data/datasources/chat_websocket_datasource.dart';
 import '../../features/chat/data/repositories/chat_repository.dart';
 import '../../features/chat/data/models/chat_models.dart';
 import '../../core/theme/app_theme.dart';
@@ -68,6 +70,11 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
   final ImagePicker _picker = ImagePicker();
+  final ChatWebSocketDataSource _chatWebSocket = ChatWebSocketDataSource();
+
+  StreamSubscription<Map<String, dynamic>>? _wsSubscription;
+  Timer? _typingDebounceTimer;
+
   bool _isTyping = false;
   int? _currentUserId;
   List<ChatMessage> _messages = [];
@@ -84,6 +91,7 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthSuccess) {
       _currentUserId = authState.user.id;
+      _initializeWebSocket(authState.token);
     }
     // Mark messages as read when opening chat
     Future.delayed(Duration.zero, () {
@@ -97,10 +105,87 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
 
   @override
   void dispose() {
+    _typingDebounceTimer?.cancel();
+    _wsSubscription?.cancel();
+    _chatWebSocket.dispose();
     _messageController.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _initializeWebSocket(String token) async {
+    try {
+      await _chatWebSocket.connect(
+        roomId: widget.chatRoomId,
+        token: token,
+      );
+
+      _wsSubscription = _chatWebSocket.events.listen(_handleWebSocketEvent);
+      _chatWebSocket.sendReadReceipt();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Live chat connection failed: $e')),
+      );
+    }
+  }
+
+  void _handleWebSocketEvent(Map<String, dynamic> event) {
+    final type = event['type']?.toString();
+    if (type == null || !mounted) {
+      return;
+    }
+
+    if (type == 'message') {
+      final messagePayload = event['message'];
+      if (messagePayload is Map) {
+        final payload = Map<String, dynamic>.from(messagePayload);
+        payload['chat_room'] ??= widget.chatRoomId;
+        payload['is_read'] ??= false;
+        payload['image_url'] ??= payload['image'];
+
+        final message = ChatMessage.fromJson(payload);
+        context.read<ChatBloc>().add(MessageReceived(message: message));
+      }
+      return;
+    }
+
+    if (type == 'typing') {
+      final userId = event['user_id'];
+      if (userId is int) {
+        context.read<ChatBloc>().add(
+              UpdateTypingStatus(
+                userId: userId,
+                isTyping: event['is_typing'] == true,
+              ),
+            );
+      }
+      return;
+    }
+
+    if (type == 'read_receipt') {
+      context.read<ChatBloc>().add(LoadMessages(roomId: widget.chatRoomId));
+      return;
+    }
+
+    if (type == 'error') {
+      final message = event['message']?.toString() ?? 'Chat websocket error';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+      return;
+    }
+
+    if (type == 'socket_closed') {
+      final authState = context.read<AuthBloc>().state;
+      if (authState is AuthSuccess) {
+        Future.delayed(const Duration(seconds: 2), () {
+          if (!mounted) return;
+          _initializeWebSocket(authState.token);
+        });
+      }
+    }
   }
 
   void _scrollToBottom() {
@@ -119,6 +204,8 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
     if (content.isEmpty && _selectedImage == null) return;
 
     _messageController.clear();
+    _typingDebounceTimer?.cancel();
+    _chatWebSocket.sendTyping(false);
 
     context.read<ChatBloc>().add(
       SendMessage(
@@ -298,6 +385,7 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
           if (state is MessageSent) {
             context.read<ChatBloc>().add(LoadMessages(roomId: widget.chatRoomId));
           }
+
           if (state is MessagesLoaded) {
             setState(() {
               _messages = state.messages;
@@ -305,6 +393,28 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               Future.delayed(const Duration(milliseconds: 300), _scrollToBottom);
             });
+          }
+
+          if (state is ChatMessageReceived) {
+            setState(() {
+              final exists = _messages.any((m) => m.id == state.message.id);
+              if (!exists) {
+                _messages.insert(0, state.message);
+              }
+            });
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              Future.delayed(const Duration(milliseconds: 300), _scrollToBottom);
+            });
+          }
+
+          if (state is TypingStatusChanged && state.userId != _currentUserId) {
+            setState(() {
+              _isTyping = state.isTyping;
+            });
+          }
+
+          if (state is MessagesMarkedAsRead) {
+            _chatWebSocket.sendReadReceipt();
           }
         },
         builder: (context, state) {
@@ -538,7 +648,22 @@ class _ChatScreenContentState extends State<_ChatScreenContent> {
                                 ),
                               ),
                               onChanged: (value) {
-                                // TODO: Send typing indicator via WebSocket
+                                if (!_chatWebSocket.isConnected) {
+                                  return;
+                                }
+
+                                if (value.trim().isEmpty) {
+                                  _typingDebounceTimer?.cancel();
+                                  _chatWebSocket.sendTyping(false);
+                                  return;
+                                }
+
+                                _chatWebSocket.sendTyping(true);
+                                _typingDebounceTimer?.cancel();
+                                _typingDebounceTimer = Timer(
+                                  const Duration(milliseconds: 1200),
+                                  () => _chatWebSocket.sendTyping(false),
+                                );
                               },
                             ),
                           ),

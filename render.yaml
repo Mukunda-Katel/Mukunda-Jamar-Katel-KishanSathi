@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: kishan-sathi-backend
+    env: python
+    rootDir: kishan_sathi_backend
+    buildCommand: pip install -r requirements.txt && python manage.py migrate && python manage.py collectstatic --noinput
+    startCommand: daphne -b 0.0.0.0 -p $PORT kishan_sathi_backend.asgi:application
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: kishan_sathi_backend.settings
+      - key: PYTHON_VERSION
+        value: 3.10.12

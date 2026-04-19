@@ -4,11 +4,12 @@ from channels.auth import AuthMiddlewareStack
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import AnonymousUser
 from django.db import close_old_connections
-from rest_framework.authtoken.models import Token
 
 
 @database_sync_to_async
 def _get_user_from_token(token_key):
+    from rest_framework.authtoken.models import Token
+
     try:
         return Token.objects.select_related('user').get(key=token_key).user
     except Token.DoesNotExist:
