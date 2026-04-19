@@ -30,6 +30,17 @@ class NotificationService {
   String? _fcmToken;
   String? get fcmToken => _fcmToken;
 
+  String _normalizeAuthToken(String token) {
+    final trimmed = token.trim();
+    if (trimmed.startsWith('Token ')) {
+      return trimmed.substring(6).trim();
+    }
+    if (trimmed.startsWith('Bearer ')) {
+      return trimmed.substring(7).trim();
+    }
+    return trimmed;
+  }
+
   // Stream controller for notification taps
   final StreamController<String> _notificationTapController =
       StreamController<String>.broadcast();
@@ -182,7 +193,89 @@ class NotificationService {
     // Show local notification
     if (message.notification != null) {
       await _showLocalNotification(message);
+      return;
     }
+
+    final type = message.data['type']?.toString();
+    if (type == 'new_message') {
+      final senderName = message.data['sender_name']?.toString() ?? 'Someone';
+      final preview = message.data['message_preview']?.toString();
+      await _showDataNotification(
+        title: 'New message from $senderName',
+        body: (preview != null && preview.trim().isNotEmpty)
+            ? preview.trim()
+            : 'You have a new message',
+        payload: jsonEncode(message.data),
+      );
+      return;
+    }
+
+    if (type == 'consultation_request') {
+      final farmerName = message.data['farmer_name']?.toString() ?? 'A farmer';
+      final preview = message.data['message_preview']?.toString();
+      await _showDataNotification(
+        title: 'New consultation request',
+        body: (preview != null && preview.trim().isNotEmpty)
+            ? '$farmerName: ${preview.trim()}'
+            : '$farmerName has requested a consultation.',
+        payload: jsonEncode(message.data),
+      );
+      return;
+    }
+
+    if (type == 'consultation_approved') {
+      await _showDataNotification(
+        title: 'Consultation Request Approved! 🎉',
+        body:
+            'Your consultation request has been approved. You can now start chatting with the doctor.',
+        payload: jsonEncode(message.data),
+      );
+      return;
+    }
+
+    if (type == 'consultation_rejected') {
+      await _showDataNotification(
+        title: 'Consultation Request Updates',
+        body:
+            'Unfortunately, your consultation request was not approved. Please try another doctor.',
+        payload: jsonEncode(message.data),
+      );
+    }
+  }
+
+  Future<void> _showDataNotification({
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    const androidDetails = AndroidNotificationDetails(
+      'consultation_notifications',
+      'Consultation Notifications',
+      channelDescription: 'Notifications for consultation requests and approvals',
+      importance: Importance.high,
+      priority: Priority.high,
+      showWhen: true,
+      icon: '@mipmap/ic_launcher',
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _localNotifications.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      title,
+      body,
+      notificationDetails,
+      payload: payload,
+    );
   }
 
   /// Show local notification
@@ -233,9 +326,10 @@ class NotificationService {
   }
 
   /// Send FCM token to backend
-  Future<void> _sendTokenToBackend(String token) async {
+  Future<void> _sendTokenToBackend(String token, {String? authTokenOverride}) async {
     try {
-      final authToken = await _secureStorage.read(key: 'auth_token');
+      final authToken =
+          authTokenOverride ?? await _secureStorage.read(key: 'auth_token');
 
       if (authToken == null || authToken.isEmpty) {
         if (kDebugMode) {
@@ -248,7 +342,7 @@ class NotificationService {
         Uri.parse('${ApiConstants.apiBaseUrl}/auth/fcm-token/'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Token $authToken',
+          'Authorization': 'Token ${_normalizeAuthToken(authToken)}',
         },
         body: jsonEncode({
           'fcm_token': token,
@@ -275,13 +369,21 @@ class NotificationService {
 
   /// Update FCM token when user logs in
   Future<void> updateFCMToken(String authToken) async {
+    final normalizedAuthToken = _normalizeAuthToken(authToken);
+
     if (_fcmToken != null && _fcmToken!.isNotEmpty) {
-      await _sendTokenToBackend(_fcmToken!);
+      await _sendTokenToBackend(
+        _fcmToken!,
+        authTokenOverride: normalizedAuthToken,
+      );
     } else {
       // Get token if not available yet
       final token = await _getFCMToken();
       if (token != null) {
-        await _sendTokenToBackend(token);
+        await _sendTokenToBackend(
+          token,
+          authTokenOverride: normalizedAuthToken,
+        );
       }
     }
   }

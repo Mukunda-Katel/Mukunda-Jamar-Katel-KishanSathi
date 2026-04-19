@@ -135,6 +135,7 @@ class MyApp extends StatelessWidget {
                       case 'buyer':
                         return const BuyerDashboard();
                       case 'doctor':
+                      case 'consultant':
                         return const ConsultantDashboard();
                       default:
                         return const FarmerDashboard();

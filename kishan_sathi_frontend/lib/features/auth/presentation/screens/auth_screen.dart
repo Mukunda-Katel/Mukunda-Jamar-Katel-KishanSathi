@@ -354,6 +354,7 @@ class _LoginFormState extends State<LoginForm> {
         route = '/buyer-dashboard';
         break;
       case 'doctor':
+      case 'consultant':
         route = '/consultant-dashboard';
         break;
       default:
@@ -714,6 +715,7 @@ class _SignupFormState extends State<SignupForm> {
         route = '/buyer-dashboard';
         break;
       case 'doctor':
+      case 'consultant':
         route = '/consultant-dashboard';
         break;
       default:
