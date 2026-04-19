@@ -80,8 +80,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         'type': 'chat_message',
                         'message': {
                             'id': message.id,
-                            'content': message.content,
+                            'content': message.content or '',
+                            'image_url': message.image.url if message.image else None,
                             'timestamp': message.timestamp.isoformat(),
+                            'is_read': message.is_read,
+                            'chat_room': message.chat_room_id,
                             'sender': {
                                 'id': message.sender.id,
                                 'full_name': message.sender.full_name,

@@ -118,16 +118,23 @@ WSGI_APPLICATION = 'kishan_sathi_backend.wsgi.application'
 ASGI_APPLICATION = 'kishan_sathi_backend.asgi.application'
 
 # Channel Layers Configuration for WebSocket
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer'  # For development
-        # For production, use Redis:
-        # 'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        # 'CONFIG': {
-        #     'hosts': [('127.0.0.1', 6379)],
-        # },
+REDIS_URL = config('REDIS_URL', default='').strip()
+
+if REDIS_URL:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                'hosts': [REDIS_URL],
+            },
+        }
     }
-}
+else:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        }
+    }
 
 DATABASES = {
     'default': {

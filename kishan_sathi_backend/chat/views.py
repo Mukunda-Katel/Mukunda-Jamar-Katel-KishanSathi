@@ -1,4 +1,6 @@
 import logging
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -155,6 +157,7 @@ class MessageViewSet(viewsets.ModelViewSet):
             )
         
         message = serializer.save(sender=request.user)
+        self._broadcast_chat_message(message=message, request=request)
         self._send_chat_push_notifications(
             chat_room=chat_room,
             sender=request.user,
@@ -165,6 +168,48 @@ class MessageViewSet(viewsets.ModelViewSet):
             MessageSerializer(message, context={'request': request}).data,
             status=status.HTTP_201_CREATED
         )
+
+    def _broadcast_chat_message(self, *, message, request):
+        """Broadcast newly created REST message to websocket room subscribers."""
+        channel_layer = get_channel_layer()
+        if channel_layer is None:
+            return
+
+        image_url = None
+        if message.image:
+            try:
+                image_url = request.build_absolute_uri(message.image.url)
+            except Exception:
+                image_url = message.image.url
+
+        payload = {
+            'id': message.id,
+            'content': message.content or '',
+            'image_url': image_url,
+            'timestamp': message.timestamp.isoformat(),
+            'is_read': message.is_read,
+            'chat_room': message.chat_room_id,
+            'sender': {
+                'id': message.sender.id,
+                'full_name': message.sender.full_name,
+                'role': message.sender.role,
+            },
+        }
+
+        try:
+            async_to_sync(channel_layer.group_send)(
+                f'chat_{message.chat_room_id}',
+                {
+                    'type': 'chat_message',
+                    'message': payload,
+                },
+            )
+        except Exception as exc:
+            logger.warning(
+                "Failed to broadcast websocket message for room_id=%s: %s",
+                message.chat_room_id,
+                exc,
+            )
 
     def _send_chat_push_notifications(self, *, chat_room, sender, message_content=None):
         """Send push notification to other room participants when a message arrives."""
