@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:io';
 
 import '../../../../core/constants/api_constants.dart';
@@ -31,7 +32,13 @@ class ChatWebSocketDataSource {
       token: normalizedToken,
     );
 
-    _socket = await WebSocket.connect(wsUri.toString());
+    final wsUrl = wsUri.toString();
+    developer.log(
+      'Connecting chat websocket to: $wsUrl',
+      name: 'ChatWebSocketDataSource',
+    );
+
+    _socket = await WebSocket.connect(wsUrl);
     _socketSubscription = _socket!.listen(
       _handleSocketData,
       onError: _handleSocketError,
@@ -44,15 +51,9 @@ class ChatWebSocketDataSource {
     required int roomId,
     required String token,
   }) {
-    final wsBaseUri = Uri.parse(ApiConstants.wsBaseUrl);
+    final wsBase = ApiConstants.wsBaseUrl;
 
-    return Uri(
-      scheme: wsBaseUri.scheme,
-      host: wsBaseUri.host,
-      port: wsBaseUri.hasPort ? wsBaseUri.port : null,
-      path: '/ws/chat/$roomId/',
-      queryParameters: {'token': token},
-    );
+    return Uri.parse('$wsBase/ws/chat/$roomId/?token=$token');
   }
 
   String _normalizeToken(String token) {
