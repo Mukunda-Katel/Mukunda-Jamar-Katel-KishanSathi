@@ -44,13 +44,12 @@ class ChatWebSocketDataSource {
     required int roomId,
     required String token,
   }) {
-    final httpBaseUri = Uri.parse(ApiConstants.serverBaseUrl);
-    final wsScheme = httpBaseUri.scheme == 'https' ? 'wss' : 'ws';
+    final wsBaseUri = Uri.parse(ApiConstants.wsBaseUrl);
 
     return Uri(
-      scheme: wsScheme,
-      host: httpBaseUri.host,
-      port: httpBaseUri.hasPort ? httpBaseUri.port : null,
+      scheme: wsBaseUri.scheme,
+      host: wsBaseUri.host,
+      port: wsBaseUri.hasPort ? wsBaseUri.port : null,
       path: '/ws/chat/$roomId/',
       queryParameters: {'token': token},
     );

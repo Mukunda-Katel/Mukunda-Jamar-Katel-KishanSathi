@@ -22,11 +22,17 @@ class ChatRemoteDataSource {
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         return data.map((room) => ChatRoom.fromJson(room)).toList();
+      } else if (response.statusCode >= 500) {
+        throw Exception('Server error while loading chats. Please try again.');
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        throw Exception('Your session has expired. Please log in again.');
       } else {
-        throw Exception('Failed to load chat rooms: ${response.body}');
+        throw Exception('Failed to load chat rooms (status: ${response.statusCode}).');
       }
+    } on SocketException {
+      throw Exception('No internet connection. Please check your network.');
     } catch (e) {
-      throw Exception('Failed to get chat rooms: $e');
+      throw Exception('Failed to get chat rooms: ${e.toString().replaceFirst('Exception: ', '')}');
     }
   }
 

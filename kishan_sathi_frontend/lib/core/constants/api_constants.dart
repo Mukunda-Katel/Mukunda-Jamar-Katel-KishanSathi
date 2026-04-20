@@ -12,6 +12,14 @@ class ApiConstants {
   static const String serverBaseUrl = localServerBaseUrl;
   static const String apiBaseUrl = '$serverBaseUrl/api';
 
+  // Auto-switches between ws:// and wss:// based on serverBaseUrl.
+  static String get wsBaseUrl {
+    if (serverBaseUrl.startsWith('https')) {
+      return serverBaseUrl.replaceFirst('https', 'wss');
+    }
+    return serverBaseUrl.replaceFirst('http', 'ws');
+  }
+
   // Backward-compatible alias used by existing services.
   static const String baseUrl = apiBaseUrl;
   
